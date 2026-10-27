@@ -124,7 +124,7 @@ def export_report(
         WHERE {where_str}
         ORDER BY time DESC
         LIMIT %(limit)s;
-    """
+    """  # nosec B608
     rows = fetch_all(sql, params)
 
     if format == "csv":

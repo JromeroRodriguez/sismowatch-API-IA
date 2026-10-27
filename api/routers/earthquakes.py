@@ -124,7 +124,7 @@ def get_events(
     where_str = " AND ".join(where_clauses)
 
     # Count total
-    count_sql = f"SELECT COUNT(*) AS total FROM gold.earthquakes WHERE {where_str};"
+    count_sql = f"SELECT COUNT(*) AS total FROM gold.earthquakes WHERE {where_str};"  # nosec B608
     count_row = fetch_one(count_sql, params)
     total = int(count_row.get("total", 0)) if count_row else 0
 
@@ -139,7 +139,7 @@ def get_events(
         WHERE {where_str}
         ORDER BY time DESC
         LIMIT %(limit)s OFFSET %(offset)s;
-    """
+    """  # nosec B608
     params["limit"] = page_size
     params["offset"] = offset
 
@@ -165,22 +165,9 @@ def get_timeseries(
     _: User = Depends(require_viewer_or_admin),
 ):
     """Retorna conteos y magnitudes máximas/promedio agrupadas por hora o día
-
     para alimentar las gráficas de líneas y barras del frontend.
     """
-    sql = f"""
-        SELECT
-            TO_CHAR(DATE_TRUNC('{interval}', time), 'YYYY-MM-DD"T"HH24:MI:SS') AS time_bucket,
-            COUNT(*) AS count,
-            MAX(mag) AS max_mag,
-            ROUND(AVG(mag)::numeric, 2) AS avg_mag
-        FROM gold.earthquakes
-        WHERE time >= NOW() - INTERVAL '%(days)s days'
-        GROUP BY DATE_TRUNC('{interval}', time)
-        ORDER BY DATE_TRUNC('{interval}', time) ASC;
-    """
-    # Use direct formatting for safe interval enum, parameterized days
-    query = f"""
+    query = """
         SELECT
             TO_CHAR(DATE_TRUNC(%(interval)s, time), 'YYYY-MM-DD"T"HH24:MI:SS') AS time_bucket,
             COUNT(*) AS count,

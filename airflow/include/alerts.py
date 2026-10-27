@@ -22,20 +22,33 @@ def update_pipeline_status(dag_id: str, run_id: str, state: str, is_failure: boo
     Uses role: sismo_transform.
     """
     now_utc = datetime.now(timezone.utc)
-    field_to_update = "last_failure_at" if is_failure else "last_success_at"
 
-    query = f"""
-    INSERT INTO gold.pipeline_status (
-        dag_id, last_run_id, state, {field_to_update}, updated_at
-    ) VALUES (
-        %(dag_id)s, %(last_run_id)s, %(state)s, %(now)s, %(now)s
-    )
-    ON CONFLICT (dag_id) DO UPDATE SET
-        last_run_id = EXCLUDED.last_run_id,
-        state = EXCLUDED.state,
-        {field_to_update} = EXCLUDED.{field_to_update},
-        updated_at = EXCLUDED.updated_at;
-    """
+    if is_failure:
+        query = """
+        INSERT INTO gold.pipeline_status (
+            dag_id, last_run_id, state, last_failure_at, updated_at
+        ) VALUES (
+            %(dag_id)s, %(last_run_id)s, %(state)s, %(now)s, %(now)s
+        )
+        ON CONFLICT (dag_id) DO UPDATE SET
+            last_run_id = EXCLUDED.last_run_id,
+            state = EXCLUDED.state,
+            last_failure_at = EXCLUDED.last_failure_at,
+            updated_at = EXCLUDED.updated_at;
+        """
+    else:
+        query = """
+        INSERT INTO gold.pipeline_status (
+            dag_id, last_run_id, state, last_success_at, updated_at
+        ) VALUES (
+            %(dag_id)s, %(last_run_id)s, %(state)s, %(now)s, %(now)s
+        )
+        ON CONFLICT (dag_id) DO UPDATE SET
+            last_run_id = EXCLUDED.last_run_id,
+            state = EXCLUDED.state,
+            last_success_at = EXCLUDED.last_success_at,
+            updated_at = EXCLUDED.updated_at;
+        """
 
     try:
         with get_db_connection(role="transform") as conn:

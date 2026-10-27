@@ -47,7 +47,7 @@ default_args = {
             description="Forzar regeneración del reporte aunque ya exista para hoy",
         ),
     },
-    doc_md="""
+    doc_md=r"""
     # DAG Diario de Reporte con IA y Detección de Anomalías
 
     ### Pipeline Flow:
