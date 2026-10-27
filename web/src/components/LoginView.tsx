@@ -36,27 +36,24 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
       
-      {/* Background radial glow */}
-      <div className="absolute w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -top-20" />
-
-      <div className="w-full max-w-md glass-panel border border-white/10 rounded-3xl p-7 sm:p-9 shadow-2xl relative z-10">
+      <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-8 shadow-xs relative z-10">
         
         {/* Brand */}
-        <div className="flex flex-col items-center text-center mb-7">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center shadow-glow-amber mb-3.5">
-            <Activity className="w-9 h-9 text-slate-950 font-bold" />
+        <div className="flex flex-col items-center text-center mb-6">
+          <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center shadow-xs mb-3 text-white">
+            <Activity className="w-6 h-6" />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-white font-sans">SismoWatch</h1>
-          <p className="text-xs text-slate-350 mt-1 font-medium">
-            Plataforma Oficial de Monitoreo Sísmico & Calidad Medallion
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 font-sans">SismoWatch</h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Plataforma Profesional de Monitoreo Sísmico & Calidad Medallion
           </p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center space-x-2.5 shadow-sm" role="alert">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+          <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center space-x-2" role="alert">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
             <span className="font-medium">{error}</span>
           </div>
         )}
@@ -64,7 +61,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         {/* Form */}
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <label htmlFor="login-username" className="block text-xs font-semibold text-slate-200 mb-1.5">
+            <label htmlFor="login-username" className="block text-xs font-semibold text-slate-700 mb-1.5">
               Usuario
             </label>
             <div className="relative">
@@ -76,13 +73,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin o viewer"
                 autoComplete="username"
-                className="w-full pl-10 pr-3 py-2.5 min-h-[42px] bg-slate-950/80 border border-slate-700/80 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 transition font-medium"
+                className="w-full pl-10 pr-3 py-2.5 min-h-[42px] bg-white border border-slate-300 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition font-medium"
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="login-password" className="block text-xs font-semibold text-slate-200 mb-1.5">
+            <label htmlFor="login-password" className="block text-xs font-semibold text-slate-700 mb-1.5">
               Contraseña
             </label>
             <div className="relative">
@@ -94,7 +91,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="admin123"
                 autoComplete="current-password"
-                className="w-full pl-10 pr-3 py-2.5 min-h-[42px] bg-slate-950/80 border border-slate-700/80 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 transition font-medium"
+                className="w-full pl-10 pr-3 py-2.5 min-h-[42px] bg-white border border-slate-300 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition font-medium"
               />
             </div>
           </div>
@@ -102,14 +99,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 min-h-[44px] rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs tracking-wider uppercase transition shadow-glow-amber disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-amber-400"
+            className="w-full py-2.5 min-h-[42px] rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs tracking-wide transition shadow-xs disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-blue-600"
           >
             {loading ? 'Verificando credenciales...' : 'Iniciar Sesión'}
           </button>
         </form>
 
         {/* Quick Presets Divider */}
-        <div className="mt-7 pt-5 border-t border-white/10">
+        <div className="mt-6 pt-5 border-t border-slate-100">
           <div className="text-[11px] text-slate-400 text-center uppercase tracking-wider font-semibold mb-3 font-mono">
             Acceso Rápido para Demostración
           </div>
@@ -119,9 +116,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               type="button"
               onClick={() => handleLogin('admin', 'admin123')}
               disabled={loading}
-              className="flex items-center justify-center space-x-2 py-2.5 px-3 min-h-[42px] rounded-xl bg-slate-850 hover:bg-slate-800 border border-rose-500/30 text-rose-300 text-xs font-semibold transition hover:border-rose-400 focus-visible:ring-2 focus-visible:ring-rose-500 disabled:opacity-50"
+              className="flex items-center justify-center space-x-2 py-2 px-3 min-h-[38px] rounded-lg bg-purple-50 hover:bg-purple-100/70 border border-purple-200 text-purple-700 text-xs font-semibold transition focus-visible:ring-2 focus-visible:ring-purple-500 disabled:opacity-50"
             >
-              <ShieldCheck className="w-4 h-4 text-rose-400" />
+              <ShieldCheck className="w-4 h-4 text-purple-600" />
               <span>Rol ADMIN</span>
             </button>
 
@@ -129,9 +126,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               type="button"
               onClick={() => handleLogin('viewer', 'admin123')}
               disabled={loading}
-              className="flex items-center justify-center space-x-2 py-2.5 px-3 min-h-[42px] rounded-xl bg-slate-850 hover:bg-slate-800 border border-sky-500/30 text-sky-300 text-xs font-semibold transition hover:border-sky-400 focus-visible:ring-2 focus-visible:ring-sky-500 disabled:opacity-50"
+              className="flex items-center justify-center space-x-2 py-2 px-3 min-h-[38px] rounded-lg bg-blue-50 hover:bg-blue-100/70 border border-blue-200 text-blue-700 text-xs font-semibold transition focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50"
             >
-              <Eye className="w-4 h-4 text-sky-400" />
+              <Eye className="w-4 h-4 text-blue-600" />
               <span>Rol VIEWER</span>
             </button>
           </div>

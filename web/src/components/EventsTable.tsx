@@ -43,23 +43,36 @@ export const EventsTable: React.FC<EventsTableProps> = ({
     }
   };
 
+  const getMagBadge = (mag: number) => {
+    if (mag >= 6.0) {
+      return 'bg-red-50 text-red-700 border-red-200 font-bold';
+    }
+    if (mag >= 4.5) {
+      return 'bg-orange-50 text-orange-700 border-orange-200 font-semibold';
+    }
+    if (mag >= 3.0) {
+      return 'bg-amber-50 text-amber-700 border-amber-200 font-semibold';
+    }
+    return 'bg-emerald-50 text-emerald-700 border-emerald-200 font-medium';
+  };
+
   return (
-    <div className="rounded-xl glass-card shadow-lg overflow-hidden flex flex-col border border-white/10">
+    <div className="rounded-xl bg-white border border-slate-200 shadow-xs overflow-hidden flex flex-col">
       
       {/* Top Filter & Export Bar */}
-      <div className="p-4 glass-panel border-b border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-3.5">
+      <div className="p-4 bg-white border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3.5">
         
         {/* Left: Search & Magnitude filter */}
         <div className="flex flex-1 items-center space-x-3">
           <div className="relative flex-1 max-w-sm">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
             <input
               type="text"
               aria-label="Buscar sismos por región o país"
               placeholder="Buscar por región (ej. California, Chile, Japón)..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 bg-slate-950/80 border border-slate-700/80 rounded-xl text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 transition"
+              className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
             />
           </div>
 
@@ -67,7 +80,7 @@ export const EventsTable: React.FC<EventsTableProps> = ({
             aria-label="Filtrar por magnitud mínima"
             value={minMagFilter === undefined ? '' : minMagFilter}
             onChange={(e) => onMinMagChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
-            className="bg-slate-950/80 border border-slate-700/80 text-xs text-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 transition cursor-pointer"
+            className="bg-slate-50 border border-slate-200 text-xs text-slate-700 rounded-lg px-3 py-2 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition cursor-pointer"
           >
             <option value="">Todas las magnitudes</option>
             <option value="2.5">&ge; 2.5 Mw (Perceptibles)</option>
@@ -83,9 +96,9 @@ export const EventsTable: React.FC<EventsTableProps> = ({
             onClick={() => handleExport('csv')}
             disabled={exporting !== null}
             aria-label="Exportar datos a formato CSV"
-            className="flex items-center space-x-2 px-3.5 py-2 min-h-[38px] rounded-xl bg-slate-850 hover:bg-slate-800 border border-white/10 text-slate-200 text-xs font-semibold transition hover:border-emerald-500/40 focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50"
+            className="flex items-center space-x-2 px-3.5 py-2 min-h-[36px] rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold transition hover:border-emerald-300 hover:text-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50 shadow-xs"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
             <span>{exporting === 'csv' ? 'Generando...' : 'Exportar CSV'}</span>
           </button>
 
@@ -93,29 +106,29 @@ export const EventsTable: React.FC<EventsTableProps> = ({
             onClick={() => handleExport('pdf')}
             disabled={exporting !== null}
             aria-label="Exportar reporte a formato PDF"
-            className="flex items-center space-x-2 px-3.5 py-2 min-h-[38px] rounded-xl bg-slate-850 hover:bg-slate-800 border border-white/10 text-slate-200 text-xs font-semibold transition hover:border-rose-500/40 focus-visible:ring-2 focus-visible:ring-rose-500 disabled:opacity-50"
+            className="flex items-center space-x-2 px-3.5 py-2 min-h-[36px] rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold transition hover:border-red-300 hover:text-red-700 focus-visible:ring-2 focus-visible:ring-red-500 disabled:opacity-50 shadow-xs"
           >
-            <FileText className="w-4 h-4 text-rose-400" />
+            <FileText className="w-4 h-4 text-red-600" />
             <span>{exporting === 'pdf' ? 'Generando...' : 'Exportar PDF'}</span>
           </button>
         </div>
 
       </div>
 
-      {/* Table Content */}
-      <div className="overflow-x-auto min-h-[320px]">
+      {/* Desktop Table View */}
+      <div className="hidden sm:block overflow-x-auto min-h-[320px]">
         {loading ? (
           <div className="flex items-center justify-center py-20 text-slate-400 text-xs animate-pulse font-mono" role="status">
             Sincronizando registros desde la capa Gold (PostgreSQL)...
           </div>
         ) : events.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-            <p className="text-sm font-semibold text-slate-300">No se encontraron eventos sísmicos con los filtros actuales.</p>
-            <p className="text-xs text-slate-400 mt-1">Prueba reduciendo el umbral de magnitud o modificando la búsqueda por región.</p>
+          <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+            <p className="text-sm font-semibold text-slate-700">No se encontraron eventos sísmicos con los filtros actuales.</p>
+            <p className="text-xs text-slate-500 mt-1">Prueba reduciendo el umbral de magnitud o modificando la búsqueda por región.</p>
           </div>
         ) : (
           <table className="w-full text-left text-xs" aria-label="Tabla de eventos sísmicos Gold">
-            <thead className="bg-slate-950/90 text-slate-400 border-b border-white/10 uppercase font-mono tracking-wider text-[11px]">
+            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 uppercase font-mono tracking-wider text-[11px] font-semibold">
               <tr>
                 <th scope="col" className="py-3 px-4">Magnitud</th>
                 <th scope="col" className="py-3 px-4">Ubicación / Región</th>
@@ -125,13 +138,10 @@ export const EventsTable: React.FC<EventsTableProps> = ({
                 <th scope="col" className="py-3 px-4 text-right">Ficha</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5 font-sans">
+            <tbody className="divide-y divide-slate-100 font-sans">
               {events.map((ev) => {
                 const mag = ev.mag || 0;
-                let badgeBg = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
-                if (mag >= 6.0) badgeBg = 'bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-glow-rose';
-                else if (mag >= 4.5) badgeBg = 'bg-orange-500/20 text-orange-300 border-orange-500/30';
-                else if (mag >= 3.0) badgeBg = 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+                const badgeBg = getMagBadge(mag);
 
                 return (
                   <tr
@@ -143,40 +153,40 @@ export const EventsTable: React.FC<EventsTableProps> = ({
                         onSelectEvent(ev);
                       }
                     }}
-                    className="hover:bg-slate-800/50 focus:bg-slate-800/60 focus:outline-none transition cursor-pointer group"
+                    className="hover:bg-slate-50/80 focus:bg-slate-50 focus:outline-none transition-colors cursor-pointer group"
                     aria-label={`Sismo de magnitud ${mag.toFixed(1)} en ${ev.place}`}
                   >
                     {/* Magnitude badge */}
                     <td className="py-3 px-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-bold border tabular-nums ${badgeBg}`}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono border tabular-nums ${badgeBg}`}>
                         {mag.toFixed(1)} Mw
                       </span>
                     </td>
 
                     {/* Place */}
-                    <td className="py-3 px-4 font-semibold text-slate-200 group-hover:text-amber-400 transition">
+                    <td className="py-3 px-4 font-medium text-slate-900 group-hover:text-blue-600 transition-colors">
                       {ev.place || 'Lugar no especificado'}
                     </td>
 
                     {/* Time */}
-                    <td className="py-3 px-4 text-slate-350 font-mono text-xs whitespace-nowrap tabular-nums">
+                    <td className="py-3 px-4 text-slate-500 font-mono text-xs whitespace-nowrap tabular-nums">
                       {new Date(ev.time).toLocaleString('es-ES', { timeZone: 'UTC' })} UTC
                     </td>
 
                     {/* Depth */}
-                    <td className="py-3 px-4 text-slate-350 font-mono text-xs whitespace-nowrap tabular-nums">
+                    <td className="py-3 px-4 text-slate-600 font-mono text-xs whitespace-nowrap tabular-nums">
                       {ev.depth_km !== null ? `${ev.depth_km.toFixed(1)} km` : '-'}
                     </td>
 
                     {/* Alertas */}
                     <td className="py-3 px-4 whitespace-nowrap">
                       {ev.tsunami === 1 ? (
-                        <span className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-700 text-[10px] font-bold tracking-wider">
-                          <Waves className="w-3.5 h-3.5" />
+                        <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 text-[10px] font-bold tracking-wider">
+                          <Waves className="w-3 h-3" />
                           <span>TSUNAMI</span>
                         </span>
                       ) : (
-                        <span className="text-slate-450 font-mono text-[11px]">Normal</span>
+                        <span className="text-slate-400 font-mono text-[11px]">Normal</span>
                       )}
                     </td>
 
@@ -189,13 +199,13 @@ export const EventsTable: React.FC<EventsTableProps> = ({
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
                           aria-label={`Ver detalles oficiales del sismo en USGS para ${ev.place}`}
-                          className="inline-flex items-center space-x-1 text-slate-400 hover:text-amber-400 text-xs font-medium p-1 transition focus-visible:ring-1 focus-visible:ring-amber-500 rounded"
+                          className="inline-flex items-center space-x-1 text-slate-500 hover:text-blue-600 text-xs font-medium p-1 transition rounded"
                         >
                           <span>USGS</span>
                           <ExternalLink className="w-3.5 h-3.5" />
                         </a>
                       ) : (
-                        <span className="text-slate-600">-</span>
+                        <span className="text-slate-300">-</span>
                       )}
                     </td>
                   </tr>
@@ -206,32 +216,79 @@ export const EventsTable: React.FC<EventsTableProps> = ({
         )}
       </div>
 
+      {/* Mobile Stacked Card View (< 640px) */}
+      <div className="sm:hidden divide-y divide-slate-100">
+        {loading ? (
+          <div className="p-8 text-center text-slate-400 text-xs animate-pulse font-mono">
+            Cargando sismos...
+          </div>
+        ) : events.length === 0 ? (
+          <div className="p-8 text-center text-slate-500 text-xs">
+            No se encontraron eventos con los filtros actuales.
+          </div>
+        ) : (
+          events.map((ev) => {
+            const mag = ev.mag || 0;
+            const badgeBg = getMagBadge(mag);
+
+            return (
+              <div
+                key={ev.id}
+                onClick={() => onSelectEvent(ev)}
+                className="p-4 space-y-2 hover:bg-slate-50 cursor-pointer active:bg-slate-100 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono border tabular-nums ${badgeBg}`}>
+                    {mag.toFixed(1)} Mw
+                  </span>
+                  {ev.tsunami === 1 && (
+                    <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 text-[10px] font-bold">
+                      <Waves className="w-3 h-3" />
+                      <span>TSUNAMI</span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="font-medium text-slate-900 text-xs">
+                  {ev.place || 'Lugar no especificado'}
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                  <span>{new Date(ev.time).toLocaleDateString()}</span>
+                  <span>Prof: {ev.depth_km} km</span>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
       {/* Pagination Footer */}
-      <div className="p-3.5 glass-panel border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-350">
+      <div className="p-3.5 bg-white border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
         <div>
-          Mostrando <span className="text-white font-bold tabular-nums">{events.length}</span> de{' '}
-          <span className="text-white font-bold tabular-nums">{total}</span> sismos registrados en Gold
+          Mostrando <span className="text-slate-900 font-semibold tabular-nums">{events.length}</span> de{' '}
+          <span className="text-slate-900 font-semibold tabular-nums">{total}</span> sismos registrados en Gold
         </div>
 
-        <div className="flex items-center space-x-2.5">
+        <div className="flex items-center space-x-2">
           <button
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage <= 1 || loading}
             aria-label="Página anterior"
-            className="p-2 min-h-[38px] min-w-[38px] flex items-center justify-center rounded-xl bg-slate-850 hover:bg-slate-800 border border-white/10 text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition focus-visible:ring-2 focus-visible:ring-amber-500"
+            className="p-1.5 min-h-[34px] min-w-[34px] flex items-center justify-center rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-xs focus-visible:ring-2 focus-visible:ring-blue-600"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
 
-          <span className="font-mono text-xs text-slate-200 px-2 font-semibold">
-            Página <span className="text-amber-400">{currentPage}</span> de {totalPages}
+          <span className="font-mono text-xs text-slate-700 px-2 font-medium">
+            Página <span className="font-bold text-blue-700">{currentPage}</span> de {totalPages}
           </span>
 
           <button
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage >= totalPages || loading}
             aria-label="Página siguiente"
-            className="p-2 min-h-[38px] min-w-[38px] flex items-center justify-center rounded-xl bg-slate-850 hover:bg-slate-800 border border-white/10 text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition focus-visible:ring-2 focus-visible:ring-amber-500"
+            className="p-1.5 min-h-[34px] min-w-[34px] flex items-center justify-center rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-xs focus-visible:ring-2 focus-visible:ring-blue-600"
           >
             <ChevronRight className="w-4 h-4" />
           </button>

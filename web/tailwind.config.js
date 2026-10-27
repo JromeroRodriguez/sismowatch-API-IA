@@ -8,31 +8,45 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       colors: {
+        canvas: '#F8FAFC',
+        surface: '#FFFFFF',
+        brand: {
+          50: '#EFF6FF',
+          100: '#DBEAFE',
+          200: '#BFDBFE',
+          300: '#93C5FD',
+          400: '#60A5FA',
+          500: '#3B82F6',
+          600: '#2563EB',
+          700: '#1D4ED8',
+          800: '#1E40AF',
+          900: '#1E3A8A',
+        },
         slate: {
           850: '#151f32',
           900: '#0f172a',
           950: '#090d16',
         },
         seismic: {
-          low: '#10b981',    // green (< 3.0)
-          med: '#f59e0b',    // amber (3.0 - 4.4)
-          high: '#f97316',   // orange (4.5 - 5.9)
-          severe: '#ef4444', // red (>= 6.0)
-          deep: '#8b5cf6',   // purple
+          low: '#16A34A',    // green (< 3.0)
+          med: '#D97706',    // amber (3.0 - 4.4)
+          high: '#EA580C',   // orange (4.5 - 5.9)
+          severe: '#DC2626', // red (>= 6.0)
+          tsunami: '#0284C7', // sky
         }
       },
       boxShadow: {
-        'glow-amber': '0 0 24px -4px rgba(245, 158, 11, 0.25)',
-        'glow-rose': '0 0 24px -4px rgba(239, 68, 68, 0.25)',
-        'glow-emerald': '0 0 24px -4px rgba(16, 185, 129, 0.25)',
-        'card-glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+        'xs': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        'card': '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05)',
+        'card-hover': '0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
+        'modal': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
       },
       animation: {
-        'pulse-fast': 'pulse 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'pulse-subtle': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       }
     },
   },

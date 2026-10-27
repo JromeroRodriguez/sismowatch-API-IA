@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getStoredSession, clearSession, fetchKPIs, fetchEvents, fetchTimeSeries, fetchPipelineStatus, fetchReports, fetchAnomalies } from './api';
 import { UserSession, KPIsResponse, Earthquake, TimeSeriesPoint, PipelineSummary, ReportItem, AnomalyItem } from './types';
 import { Header } from './components/Header';
@@ -36,6 +36,7 @@ export const App: React.FC = () => {
   // Loading & Error States
   const [loading, setLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [tableLoading, setTableLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // SSE Live State
@@ -46,7 +47,10 @@ export const App: React.FC = () => {
   // Admin Modal State
   const [isBackfillOpen, setIsBackfillOpen] = useState<boolean>(false);
 
-  // Data Loading Function
+  // Ref to track initial mount
+  const isInitialMount = useRef<boolean>(true);
+
+  // Full Data Loading Function (Initial load or Manual Refresh)
   const loadAllData = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
     setIsRefreshing(true);
@@ -89,12 +93,40 @@ export const App: React.FC = () => {
     }
   }, [currentPage, pageSize, minMagFilter, searchQuery]);
 
-  // Initial load and filter change trigger
+  // Focused Table Data Loading (prevents full-pipeline refetching when navigating table pages)
+  const loadTableEvents = useCallback(async (page: number, search: string, minMag: number | undefined) => {
+    setTableLoading(true);
+    try {
+      const res = await fetchEvents({
+        page,
+        pageSize,
+        minMag,
+        search,
+      });
+      setEvents(res.items);
+      setTotalEvents(res.total);
+    } catch (err: any) {
+      console.error('Table fetch error:', err);
+    } finally {
+      setTableLoading(false);
+    }
+  }, [pageSize]);
+
+  // Initial load
   useEffect(() => {
     if (session) {
       loadAllData();
+      isInitialMount.current = false;
     }
-  }, [session, loadAllData]);
+  }, [session]);
+
+  // Trigger focused table reload on pagination or filter change (after initial mount)
+  useEffect(() => {
+    if (isInitialMount.current) return;
+    if (session) {
+      loadTableEvents(currentPage, searchQuery, minMagFilter);
+    }
+  }, [currentPage, searchQuery, minMagFilter, loadTableEvents, session]);
 
   // Setup Server-Sent Events (SSE) stream
   useEffect(() => {
@@ -185,7 +217,7 @@ export const App: React.FC = () => {
   const totalPages = Math.max(1, Math.ceil(totalEvents / pageSize));
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       
       {/* Header */}
       <Header
@@ -205,14 +237,14 @@ export const App: React.FC = () => {
         
         {/* Error Alert Banner */}
         {error && (
-          <div className="p-4 rounded-xl glass-panel border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between shadow-lg" role="alert">
+          <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs flex items-center justify-between shadow-xs" role="alert">
             <div className="flex items-center space-x-2.5">
-              <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+              <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
               <span className="font-medium">{error}</span>
             </div>
             <button
               onClick={() => loadAllData()}
-              className="px-3.5 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-100 font-semibold transition focus-visible:ring-2 focus-visible:ring-rose-400"
+              className="px-3.5 py-1.5 rounded-lg bg-white border border-red-300 hover:bg-red-100 text-red-700 font-semibold transition focus-visible:ring-2 focus-visible:ring-red-500 text-xs shadow-xs"
             >
               Reintentar
             </button>
@@ -222,28 +254,28 @@ export const App: React.FC = () => {
         {/* Live Earthquake Floating Toast Notification */}
         {newEarthquakeToast && (
           <div 
-            className="fixed bottom-6 left-6 z-40 animate-bounce motion-reduce:animate-none glass-panel border border-amber-500/40 rounded-2xl p-4 shadow-glow-amber max-w-sm flex items-start space-x-3.5"
+            className="fixed bottom-6 left-6 z-40 bg-white border border-blue-200 rounded-xl p-4 shadow-lg max-w-sm flex items-start space-x-3.5 animate-in fade-in slide-in-from-bottom-2 duration-200"
             role="status"
             aria-live="polite"
           >
-            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 shrink-0">
+            <div className="p-2.5 rounded-lg bg-blue-50 text-blue-600 shrink-0">
               <Bell className="w-5 h-5 animate-pulse motion-reduce:animate-none" />
             </div>
             <div className="flex-1 pr-1">
-              <div className="text-[11px] font-bold text-amber-400 uppercase tracking-wider flex items-center justify-between">
+              <div className="text-[11px] font-bold text-blue-700 uppercase tracking-wider flex items-center justify-between">
                 <span>Nuevo Sismo en Vivo (SSE)</span>
               </div>
-              <p className="text-xs text-white font-semibold mt-1 leading-snug">{newEarthquakeToast.place}</p>
-              <div className="text-xs text-slate-300 font-mono mt-1.5 flex items-center space-x-2">
-                <span>Mag: <b className="text-amber-400 font-bold">{newEarthquakeToast.mag?.toFixed(1)} Mw</b></span>
-                <span className="text-slate-500">&bull;</span>
+              <p className="text-xs text-slate-900 font-semibold mt-1 leading-snug">{newEarthquakeToast.place}</p>
+              <div className="text-xs text-slate-600 font-mono mt-1.5 flex items-center space-x-2">
+                <span>Mag: <b className="text-blue-700 font-bold">{newEarthquakeToast.mag?.toFixed(1)} Mw</b></span>
+                <span className="text-slate-300">&bull;</span>
                 <span>Prof: {newEarthquakeToast.depth_km} km</span>
               </div>
             </div>
             <button
               onClick={() => setNewEarthquakeToast(null)}
               aria-label="Cerrar notificación"
-              className="p-1 text-slate-400 hover:text-white rounded-lg transition"
+              className="p-1 text-slate-400 hover:text-slate-700 rounded-lg transition"
             >
               <X className="w-4 h-4" />
             </button>
@@ -294,7 +326,7 @@ export const App: React.FC = () => {
                 setSelectedEvent(ev);
                 setActiveTab('dashboard');
               }}
-              loading={loading}
+              loading={loading || tableLoading}
             />
           </div>
         )}
@@ -324,7 +356,7 @@ export const App: React.FC = () => {
       )}
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-4 text-center text-xs text-slate-500 font-mono">
+      <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500 font-mono">
         SismoWatch &bull; Arquitectura Medallion (Bronze / Silver / Gold) &bull; Pandera Quality Gate &bull; USGS Real-Time
       </footer>
 
