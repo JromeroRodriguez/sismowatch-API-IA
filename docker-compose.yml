@@ -1,0 +1,123 @@
+name: sismowatch
+
+x-airflow-common: &airflow-common
+  build:
+    context: ./airflow
+    dockerfile: Dockerfile
+  image: sismowatch-airflow:latest
+  user: "${AIRFLOW_UID:-1002}:0"
+  environment:
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
+    AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW__WEBSERVER__SECRET_KEY}
+    AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"
+    AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: ""
+    _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-sismo_admin}
+    _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-SismoPass2026!SecOps}
+    _AIRFLOW_WWW_USER_FIRSTNAME: ${_AIRFLOW_WWW_USER_FIRSTNAME:-Sismo}
+    _AIRFLOW_WWW_USER_LASTNAME: ${_AIRFLOW_WWW_USER_LASTNAME:-Admin}
+    _AIRFLOW_WWW_USER_EMAIL: ${_AIRFLOW_WWW_USER_EMAIL:-admin@sismowatch.internal}
+    # Database connections for SismoWatch pipelines
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: 5432
+    POSTGRES_DB: sismowatch
+    DB_INGEST_USER: ${DB_INGEST_USER}
+    DB_INGEST_PASSWORD: ${DB_INGEST_PASSWORD}
+    DB_TRANSFORM_USER: ${DB_TRANSFORM_USER}
+    DB_TRANSFORM_PASSWORD: ${DB_TRANSFORM_PASSWORD}
+    DB_READONLY_USER: ${DB_READONLY_USER}
+    DB_READONLY_PASSWORD: ${DB_READONLY_PASSWORD}
+    AI_PROVIDER: ${AI_PROVIDER:-gemini}
+    GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    USGS_API_URL: ${USGS_API_URL:-https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson}
+    USGS_HISTORICAL_URL: ${USGS_HISTORICAL_URL:-https://earthquake.usgs.gov/fdsnws/event/1/query}
+    PYTHONPATH: /opt/airflow:/opt/airflow/include
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./airflow/include:/opt/airflow/include
+    - ./airflow/logs:/opt/airflow/logs
+    - ./airflow/tests:/opt/airflow/tests
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: sismowatch-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-PostgresMaster2026!Secured}
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: always
+
+  airflow-init:
+    <<: *airflow-common
+    container_name: sismowatch-airflow-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command:
+      - bash
+      - -c
+      - |
+        echo "Running Airflow database migrations..."
+        airflow db migrate
+        echo "Creating admin user '${_AIRFLOW_WWW_USER_USERNAME}'..."
+        airflow users create \
+          --username "${_AIRFLOW_WWW_USER_USERNAME}" \
+          --firstname "${_AIRFLOW_WWW_USER_FIRSTNAME}" \
+          --lastname "${_AIRFLOW_WWW_USER_LASTNAME}" \
+          --role Admin \
+          --email "${_AIRFLOW_WWW_USER_EMAIL}" \
+          --password "${_AIRFLOW_WWW_USER_PASSWORD}" || true
+        echo "Airflow initialization complete!"
+    restart: "no"
+
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: sismowatch-airflow-webserver
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+    command: webserver
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 6
+    restart: always
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: sismowatch-airflow-scheduler
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    command: scheduler
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname \"$${HOSTNAME}\""]
+      interval: 10s
+      timeout: 10s
+      retries: 6
+    restart: always
+
+volumes:
+  postgres_data:
