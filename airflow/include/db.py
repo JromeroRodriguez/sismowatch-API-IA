@@ -49,3 +49,11 @@ def get_db_connection(role: str = "transform"):
         raise
     finally:
         conn.close()
+
+
+@contextmanager
+def get_transform_db_cursor():
+    """Context manager yielding RealDictCursor with sismo_transform privileges."""
+    with get_db_connection(role="transform") as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            yield cur

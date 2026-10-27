@@ -9,8 +9,8 @@ interface HeaderProps {
   lastUpdated: string | null;
   onRefresh: () => void;
   isRefreshing: boolean;
-  activeTab: 'dashboard' | 'events' | 'pipeline';
-  setActiveTab: (tab: 'dashboard' | 'events' | 'pipeline') => void;
+  activeTab: 'dashboard' | 'events' | 'pipeline' | 'ai-reports';
+  setActiveTab: (tab: 'dashboard' | 'events' | 'pipeline' | 'ai-reports') => void;
   onOpenBackfill?: () => void;
 }
 
@@ -39,7 +39,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-amber-400 via-rose-300 to-slate-100 bg-clip-text text-transparent">
                 SismoWatch
               </span>
-              <span className="hidden sm:inline-block ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-amber-400 border border-slate-700">
+              <span className="hidden sm:inline-block ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-slate-850 text-amber-400 border border-slate-700">
                 Gold v1.0
               </span>
             </div>
@@ -66,6 +66,16 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               Eventos & Exportación
+            </button>
+            <button
+              onClick={() => setActiveTab('ai-reports')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                activeTab === 'ai-reports'
+                  ? 'bg-slate-800 text-amber-400 border border-slate-700'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
+              }`}
+            >
+              IA & Anomalías
             </button>
             <button
               onClick={() => setActiveTab('pipeline')}

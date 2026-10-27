@@ -30,7 +30,9 @@ x-airflow-common: &airflow-common
     DB_TRANSFORM_PASSWORD: ${DB_TRANSFORM_PASSWORD}
     DB_READONLY_USER: ${DB_READONLY_USER}
     DB_READONLY_PASSWORD: ${DB_READONLY_PASSWORD}
-    AI_PROVIDER: ${AI_PROVIDER:-gemini}
+    AI_PROVIDER: ${AI_PROVIDER:-groq}
+    GROQ_API_KEY: ${GROQ_API_KEY:-}
+    GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
     GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     USGS_API_URL: ${USGS_API_URL:-https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson}
@@ -144,6 +146,8 @@ services:
       AIRFLOW_BASE_URL: http://airflow-webserver:8080
       _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-sismo_admin}
       _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-admin123}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
     ports:
       - "8000:8000"
     volumes:

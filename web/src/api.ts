@@ -1,4 +1,12 @@
-import { KPIsResponse, PaginatedEarthquakes, PipelineSummary, TimeSeriesPoint, UserSession } from './types';
+import {
+  KPIsResponse,
+  PaginatedEarthquakes,
+  PipelineSummary,
+  TimeSeriesPoint,
+  UserSession,
+  ReportItem,
+  AnomalyItem,
+} from './types';
 
 const API_BASE = ''; // uses Vite proxy
 
@@ -101,6 +109,38 @@ export async function fetchPipelineStatus(): Promise<PipelineSummary> {
     window.location.reload();
   }
   if (!resp.ok) throw new Error('Error al cargar estado del pipeline');
+  return resp.json();
+}
+
+export async function fetchReports(): Promise<ReportItem[]> {
+  const resp = await fetch(`${API_BASE}/api/reports`, { headers: getAuthHeaders() });
+  if (resp.status === 401) {
+    clearSession();
+    window.location.reload();
+  }
+  if (!resp.ok) throw new Error('Error al cargar reportes de IA');
+  return resp.json();
+}
+
+export async function fetchAnomalies(): Promise<AnomalyItem[]> {
+  const resp = await fetch(`${API_BASE}/api/reports/anomalies`, { headers: getAuthHeaders() });
+  if (resp.status === 401) {
+    clearSession();
+    window.location.reload();
+  }
+  if (!resp.ok) throw new Error('Error al cargar anomalías');
+  return resp.json();
+}
+
+export async function regenerateAIReport() {
+  const resp = await fetch(`${API_BASE}/api/admin/reports/regenerate`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  if (resp.status === 403) {
+    throw new Error('Permiso denegado: solo administradores pueden regenerar el reporte');
+  }
+  if (!resp.ok) throw new Error('Error solicitando regeneración de reporte');
   return resp.json();
 }
 

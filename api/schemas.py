@@ -98,18 +98,34 @@ class PipelineSummary(BaseModel):
     latest_quality: Optional[QualityMetricItem] = None
 
 
-# --- Reports Schemas ---
+# --- Reports & Anomalies Schemas ---
 class ReportItem(BaseModel):
     id: int
     report_date: str
-    title: str
-    executive_summary: str
+    title: Optional[str] = None
+    summary_narrative: str
     total_events: int
     max_magnitude: Optional[float] = None
-    anomalies_detected: int = 0
-    model_used: Optional[str] = "gemini-1.5-flash"
-    cost_usd: Optional[float] = 0.0
+    avg_magnitude: Optional[float] = None
+    tsunami_events: int = 0
+    most_active_region: Optional[str] = None
+    model_used: Optional[str] = "openai/gpt-oss-120b"
+    tokens_used: int = 0
+    latency_ms: int = 0
+    cost_estimate_usd: Optional[float] = 0.0
     generated_at: datetime
+
+
+class AnomalyItem(BaseModel):
+    id: int
+    event_id: Optional[str] = None
+    detection_date: datetime
+    technique: str
+    place: Optional[str] = None
+    magnitude: Optional[float] = None
+    depth_km: Optional[float] = None
+    anomaly_score: Optional[float] = None
+    explanation: str
 
 
 # --- Admin Action Schemas ---

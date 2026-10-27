@@ -1,19 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getStoredSession, clearSession, fetchKPIs, fetchEvents, fetchTimeSeries, fetchPipelineStatus } from './api';
-import { UserSession, KPIsResponse, Earthquake, TimeSeriesPoint, PipelineSummary } from './types';
+import { getStoredSession, clearSession, fetchKPIs, fetchEvents, fetchTimeSeries, fetchPipelineStatus, fetchReports, fetchAnomalies } from './api';
+import { UserSession, KPIsResponse, Earthquake, TimeSeriesPoint, PipelineSummary, ReportItem, AnomalyItem } from './types';
 import { Header } from './components/Header';
 import { KpiCards } from './components/KpiCards';
 import { EarthquakeMap } from './components/EarthquakeMap';
 import { ActivityCharts } from './components/ActivityCharts';
 import { EventsTable } from './components/EventsTable';
 import { PipelineModal } from './components/PipelineModal';
+import { AIReportsView } from './components/AIReportsView';
 import { AdminBackfillModal } from './components/AdminBackfillModal';
 import { LoginView } from './components/LoginView';
 import { AlertCircle, Bell } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [session, setSession] = useState<UserSession | null>(getStoredSession());
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'events' | 'pipeline'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'events' | 'pipeline' | 'ai-reports'>('dashboard');
 
   // Dashboard Data State
   const [kpis, setKpis] = useState<KPIsResponse | null>(null);
@@ -21,6 +22,8 @@ export const App: React.FC = () => {
   const [totalEvents, setTotalEvents] = useState<number>(0);
   const [timeSeries, setTimeSeries] = useState<TimeSeriesPoint[]>([]);
   const [pipeline, setPipeline] = useState<PipelineSummary | null>(null);
+  const [reports, setReports] = useState<ReportItem[]>([]);
+  const [anomalies, setAnomalies] = useState<AnomalyItem[]>([]);
 
   // Interaction State
   const [selectedEvent, setSelectedEvent] = useState<Earthquake | null>(null);
@@ -49,7 +52,7 @@ export const App: React.FC = () => {
     setError(null);
 
     try {
-      const [kpiRes, eventsRes, tsRes, pipeRes] = await Promise.all([
+      const [kpiRes, eventsRes, tsRes, pipeRes, repRes, anomRes] = await Promise.all([
         fetchKPIs(),
         fetchEvents({
           page: currentPage,
@@ -59,6 +62,8 @@ export const App: React.FC = () => {
         }),
         fetchTimeSeries(7, 'hour'),
         fetchPipelineStatus(),
+        fetchReports(),
+        fetchAnomalies(),
       ]);
 
       setKpis(kpiRes);
@@ -66,6 +71,8 @@ export const App: React.FC = () => {
       setTotalEvents(eventsRes.total);
       setTimeSeries(tsRes);
       setPipeline(pipeRes);
+      setReports(repRes);
+      setAnomalies(anomRes);
       setLastUpdated(new Date().toLocaleTimeString());
     } catch (err: any) {
       console.error('Fetch error:', err);
@@ -267,7 +274,20 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 3: PIPELINE & CALIDAD */}
+        {/* TAB 3: AI REPORTS & ANOMALIES */}
+        {activeTab === 'ai-reports' && (
+          <div className="space-y-6">
+            <AIReportsView
+              reports={reports}
+              anomalies={anomalies}
+              session={session}
+              onRefresh={() => loadAllData(true)}
+              loading={loading}
+            />
+          </div>
+        )}
+
+        {/* TAB 4: PIPELINE & CALIDAD */}
         {activeTab === 'pipeline' && (
           <div className="space-y-6">
             <PipelineModal pipeline={pipeline} loading={loading} />

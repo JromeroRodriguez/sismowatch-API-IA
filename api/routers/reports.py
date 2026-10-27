@@ -7,25 +7,28 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response, StreamingResponse
 from auth import require_viewer_or_admin
 from database import fetch_all, fetch_one
-from schemas import ReportItem, User
+from schemas import AnomalyItem, ReportItem, User
 
 router = APIRouter(prefix="/api/reports", tags=["Reportes y Exportación"])
 
 
-@router.get("", response_model=list[ReportItem], summary="Historial de reportes generados")
+@router.get("", response_model=list[ReportItem], summary="Historial de reportes ejecutivos con IA")
 def get_reports(_: User = Depends(require_viewer_or_admin)):
     """Retorna el historial de reportes diarios ejecutivos almacenados en gold.ai_reports."""
     sql = """
         SELECT
             id,
             report_date::text,
-            title,
-            executive_summary,
+            summary_narrative,
             total_events,
             max_magnitude,
-            anomalies_detected,
+            avg_magnitude,
+            tsunami_events,
+            most_active_region,
             model_used,
-            cost_usd,
+            tokens_used,
+            latency_ms,
+            cost_estimate_usd,
             generated_at
         FROM gold.ai_reports
         ORDER BY report_date DESC
@@ -33,25 +36,69 @@ def get_reports(_: User = Depends(require_viewer_or_admin)):
     """
     try:
         rows = fetch_all(sql)
+        items = []
+        for r in rows:
+            narrative = r["summary_narrative"] or ""
+            # Extract first line as title if formatted as markdown
+            first_line = narrative.split("\n")[0] if narrative else f"Reporte Sismológico {r['report_date']}"
+            items.append(
+                ReportItem(
+                    id=r["id"],
+                    report_date=str(r["report_date"]),
+                    title=first_line,
+                    summary_narrative=narrative,
+                    total_events=r["total_events"],
+                    max_magnitude=float(r["max_magnitude"]) if r["max_magnitude"] is not None else None,
+                    avg_magnitude=float(r["avg_magnitude"]) if r["avg_magnitude"] is not None else None,
+                    tsunami_events=int(r["tsunami_events"] or 0),
+                    most_active_region=r["most_active_region"],
+                    model_used=r["model_used"],
+                    tokens_used=int(r["tokens_used"] or 0),
+                    latency_ms=int(r["latency_ms"] or 0),
+                    cost_estimate_usd=float(r["cost_estimate_usd"] or 0.0),
+                    generated_at=r["generated_at"],
+                )
+            )
+        return items
+    except Exception:
+        return []
+
+
+@router.get("/anomalies", response_model=list[AnomalyItem], summary="Alertas de anomalías sísmicas (Z-score)")
+def get_anomalies(_: User = Depends(require_viewer_or_admin)):
+    """Retorna el registro de anomalías sísmicas detectadas y explicadas por IA."""
+    sql = """
+        SELECT
+            id,
+            event_id,
+            detection_date,
+            technique,
+            place,
+            magnitude,
+            depth_km,
+            anomaly_score,
+            explanation
+        FROM gold.ai_anomalies
+        ORDER BY detection_date DESC
+        LIMIT 50;
+    """
+    try:
+        rows = fetch_all(sql)
         return [
-            ReportItem(
+            AnomalyItem(
                 id=r["id"],
-                report_date=str(r["report_date"]),
-                title=r["title"],
-                executive_summary=r["executive_summary"],
-                total_events=r["total_events"],
-                max_magnitude=(
-                    float(r["max_magnitude"]) if r["max_magnitude"] is not None else None
-                ),
-                anomalies_detected=r["anomalies_detected"],
-                model_used=r["model_used"],
-                cost_usd=float(r["cost_usd"]) if r["cost_usd"] is not None else 0.0,
-                generated_at=r["generated_at"],
+                event_id=r["event_id"],
+                detection_date=r["detection_date"],
+                technique=r["technique"],
+                place=r["place"],
+                magnitude=float(r["magnitude"]) if r["magnitude"] is not None else None,
+                depth_km=float(r["depth_km"]) if r["depth_km"] is not None else None,
+                anomaly_score=float(r["anomaly_score"]) if r["anomaly_score"] is not None else None,
+                explanation=r["explanation"],
             )
             for r in rows
         ]
     except Exception:
-        # If table empty or awaiting Phase 7, return empty list gracefully
         return []
 
 

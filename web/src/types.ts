@@ -70,6 +70,35 @@ export interface PipelineSummary {
   latest_quality: QualityMetricItem | null;
 }
 
+export interface ReportItem {
+  id: number;
+  report_date: string;
+  title?: string;
+  summary_narrative: string;
+  total_events: number;
+  max_magnitude?: number;
+  avg_magnitude?: number;
+  tsunami_events: number;
+  most_active_region?: string;
+  model_used: string;
+  tokens_used: number;
+  latency_ms: number;
+  cost_estimate_usd: number;
+  generated_at: string;
+}
+
+export interface AnomalyItem {
+  id: number;
+  event_id?: string;
+  detection_date: string;
+  technique: string;
+  place?: string;
+  magnitude?: number;
+  depth_km?: number;
+  anomaly_score?: number;
+  explanation: string;
+}
+
 export interface UserSession {
   username: string;
   role: 'admin' | 'viewer';
