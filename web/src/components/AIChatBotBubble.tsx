@@ -6,12 +6,12 @@ import {
   Sparkles,
   RotateCcw,
   Compass,
-  AlertTriangle,
+  Flame,
   FileText,
-  TrendingDown,
-  Layers,
+  TrendingUp,
   Zap,
   X,
+  ArrowRight,
 } from 'lucide-react';
 import { ChatMessage, UserSession } from '../types';
 import { sendChatMessage } from '../api';
@@ -20,12 +20,43 @@ interface AIChatBotBubbleProps {
   session: UserSession;
 }
 
-const INITIAL_SUGGESTIONS = [
-  { icon: Compass, label: '¿Dónde hay más sismos?', query: '¿Dónde hay más sismos actualmente?' },
-  { icon: TrendingDown, label: '¿Lugar de menor actividad?', query: '¿Cuál es el lugar con menor actividad sísmica registrada?' },
-  { icon: FileText, label: 'Reporte ejecutivo 24h', query: 'Genérame un reporte ejecutivo de la actividad sísmica de las últimas 24 horas' },
-  { icon: AlertTriangle, label: 'Sismos más fuertes', query: '¿Cuáles han sido los sismos más fuertes y hubo alertas de tsunami?' },
-  { icon: Layers, label: 'Anomalías Z-Score', query: '¿Cuáles son las anomalías estadísticas Z-Score detectadas?' },
+interface WelcomeSuggestion {
+  id: string;
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  query: string;
+}
+
+const WELCOME_SUGGESTIONS: WelcomeSuggestion[] = [
+  {
+    id: 'location',
+    icon: Compass,
+    title: 'Actividad por ubicación',
+    description: 'Identifica regiones y zonas geográficas con mayor o menor frecuencia de eventos.',
+    query: '¿Cuáles son las regiones con mayor y menor actividad sísmica registrada en el sistema?',
+  },
+  {
+    id: 'magnitude',
+    icon: Flame,
+    title: 'Sismos de mayor magnitud',
+    description: 'Consulta los eventos más significativos registrados y alertas asociadas.',
+    query: '¿Cuáles han sido los sismos de mayor magnitud registrados y qué características tuvieron?',
+  },
+  {
+    id: 'summary24h',
+    icon: FileText,
+    title: 'Resumen de 24 horas',
+    description: 'Genera una síntesis ejecutiva de la actividad consolidada en el último día.',
+    query: 'Genera un reporte ejecutivo de la actividad sísmica de las últimas 24 horas.',
+  },
+  {
+    id: 'trends',
+    icon: TrendingUp,
+    title: 'Tendencias y anomalías',
+    description: 'Analiza patrones de profundidad y desviaciones estadísticas Z-Score.',
+    query: '¿Qué tendencias o anomalías estadísticas Z-Score se han detectado en los registros?',
+  },
 ];
 
 // Sanitizer to eliminate any emojis from both static text and LLM responses
@@ -40,31 +71,14 @@ const removeEmojis = (text: string): string => {
 
 export const AIChatBotBubble: React.FC<AIChatBotBubbleProps> = ({ session }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: `¡Hola **${session.username}**! Soy **SismoBot**, tu analista sísmico en tiempo real.
-
-Estoy conectado directamente a la capa **Gold** de PostgreSQL con **Groq \`openai/gpt-oss-120b\`**. Puedes preguntarme:
-
-* *"¿Dónde hay más sismos?"*
-* *"¿Cuál es el lugar de menor actividad?"*
-* *"Genérame un reporte ejecutivo 24h"*
-* *"¿Cuáles son los sismos más fuertes o anomalías?"*
-
-¿En qué puedo ayudarte?`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      model: 'openai/gpt-oss-120b',
-      latency_ms: 0,
-    },
-  ]);
-
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const hasUserMessages = messages.some((m) => m.role === 'user');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -106,7 +120,6 @@ Estoy conectado directamente a la capa **Gold** de PostgreSQL con **Groq \`opena
 
     try {
       const historyPayload = messages
-        .filter((m) => m.id !== 'welcome')
         .slice(-4)
         .map((m) => ({ role: m.role, content: m.content }));
 
@@ -147,16 +160,7 @@ Estoy conectado directamente a la capa **Gold** de PostgreSQL con **Groq \`opena
   };
 
   const handleClearChat = () => {
-    setMessages([
-      {
-        id: 'welcome-reset',
-        role: 'assistant',
-        content: `Conversación reiniciada. ¿Qué datos sísmicos de la capa Gold deseas consultar?`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        model: 'openai/gpt-oss-120b',
-        latency_ms: 0,
-      },
-    ]);
+    setMessages([]);
     setSuggestedQuestions([]);
   };
 
@@ -265,7 +269,7 @@ Estoy conectado directamente a la capa **Gold** de PostgreSQL con **Groq \`opena
         </button>
       </div>
 
-      {/* Centered Modal with Blurred Backdrop ("se abre en el centro de la pantalla, difumina el fondo") */}
+      {/* Centered Modal with Blurred Backdrop */}
       {isOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200"
@@ -320,29 +324,87 @@ Estoy conectado directamente a la capa **Gold** de PostgreSQL con **Groq \`opena
               </div>
             </div>
 
-            {/* Quick Suggestions Chips */}
-            <div className="px-6 py-2.5 bg-slate-50 border-b border-slate-100 overflow-x-auto flex items-center space-x-2 shrink-0">
-              {(suggestedQuestions.length > 0
-                ? suggestedQuestions.map((q) => ({ label: q, query: q, icon: Sparkles }))
-                : INITIAL_SUGGESTIONS
-              ).map((item, index) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={index}
-                    onClick={() => handleSend(item.query)}
-                    disabled={loading}
-                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-xs text-slate-700 hover:text-blue-700 whitespace-nowrap transition-colors shrink-0 disabled:opacity-50 shadow-2xs font-medium"
-                  >
-                    <Icon className="w-3.5 h-3.5 text-blue-600" />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {/* Quick Follow-up Chips (Only visible once conversation has started) */}
+            {hasUserMessages && (
+              <div className="px-6 py-2 bg-slate-50 border-b border-slate-100 overflow-x-auto flex items-center space-x-2 shrink-0">
+                {(suggestedQuestions.length > 0
+                  ? suggestedQuestions.map((q) => ({ label: q, query: q, icon: Sparkles }))
+                  : WELCOME_SUGGESTIONS.map((s) => ({ label: s.title, query: s.query, icon: s.icon }))
+                ).map((item, index) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleSend(item.query)}
+                      disabled={loading}
+                      className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-xs text-slate-700 hover:text-blue-700 whitespace-nowrap transition-colors shrink-0 disabled:opacity-50 shadow-2xs font-medium"
+                    >
+                      <Icon className="w-3 h-3 text-blue-600" />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
-            {/* Messages Feed */}
+            {/* Main Scroll Feed */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
+              
+              {/* Natural, Professional Welcome Screen (Visible before first message) */}
+              {!hasUserMessages && (
+                <div className="py-2 sm:py-4 px-1 max-w-xl mx-auto flex flex-col items-center text-center animate-in fade-in duration-200">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-xs mb-3">
+                    <Bot className="w-6 h-6" />
+                  </div>
+
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                    Hola, {session.username}
+                  </h3>
+
+                  <p className="text-xs sm:text-sm text-slate-600 mt-1.5 leading-relaxed max-w-lg">
+                    Soy <strong>SismoBot</strong>, tu asistente para análisis de datos sísmicos consolidados en la capa Gold de PostgreSQL. Puedo ayudarte a explorar patrones geográficos, eventos significativos y resúmenes ejecutivos.
+                  </p>
+
+                  <div className="w-full mt-6 text-left">
+                    <div className="text-[11px] font-semibold text-slate-500 uppercase font-mono tracking-wider mb-2.5 px-0.5">
+                      Consultas sugeridas para iniciar
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {WELCOME_SUGGESTIONS.map((sug) => {
+                        const Icon = sug.icon;
+                        return (
+                          <button
+                            key={sug.id}
+                            type="button"
+                            onClick={() => handleSend(sug.query)}
+                            disabled={loading}
+                            className="p-3.5 rounded-xl bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 text-left transition-all duration-150 shadow-xs group focus-visible:ring-2 focus-visible:ring-blue-600 cursor-pointer disabled:opacity-50 flex flex-col justify-between"
+                          >
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="p-2 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-100 group-hover:text-blue-700 transition-colors">
+                                  <Icon className="w-4 h-4" />
+                                </div>
+                                <ArrowRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+                              </div>
+                              <div className="text-xs font-semibold text-slate-900 group-hover:text-blue-700 transition-colors">
+                                {sug.title}
+                              </div>
+                              <div className="text-[11px] text-slate-500 mt-1 leading-snug">
+                                {sug.description}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Active Conversation Messages */}
               {messages.map((msg) => (
                 <div
                   key={msg.id}
