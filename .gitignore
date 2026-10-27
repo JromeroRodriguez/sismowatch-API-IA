@@ -53,6 +53,8 @@ yarn-error.log*
 
 # Database & Docker local mounts
 postgres_data/
+docker-volume/
+openmetadata/postgres_sismowatch.yaml
 
 # IDE & OS
 .idea/
