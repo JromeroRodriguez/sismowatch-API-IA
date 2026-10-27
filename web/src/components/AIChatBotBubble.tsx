@@ -29,6 +29,16 @@ const INITIAL_SUGGESTIONS = [
   { icon: Layers, label: 'Anomalías Z-Score', query: '¿Cuáles son las anomalías estadísticas Z-Score detectadas?' },
 ];
 
+// Sanitizer to eliminate any emojis from both static text and LLM responses
+const removeEmojis = (text: string): string => {
+  return text
+    .replace(
+      /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2702}-\u{27B0}\u{24C2}-\u{1F251}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2B00}-\u{2BFF}\u{200D}\u{FE0F}]/gu,
+      ''
+    )
+    .trim();
+};
+
 export const AIChatBotBubble: React.FC<AIChatBotBubbleProps> = ({ session }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -39,10 +49,10 @@ export const AIChatBotBubble: React.FC<AIChatBotBubbleProps> = ({ session }) => 
 
 Estoy conectado directamente a la capa **Gold** de PostgreSQL con **Groq \`openai/gpt-oss-120b\`**. Puedes preguntarme:
 
-* 📍 *"¿Dónde hay más sismos?"*
-* 📉 *"¿Cuál es el lugar de menor actividad?"*
-* 📊 *"Genérame un reporte ejecutivo 24h"*
-* ⚠️ *"¿Cuáles son los sismos más fuertes o anomalías?"*
+* *"¿Dónde hay más sismos?"*
+* *"¿Cuál es el lugar de menor actividad?"*
+* *"Genérame un reporte ejecutivo 24h"*
+* *"¿Cuáles son los sismos más fuertes o anomalías?"*
 
 ¿En qué puedo ayudarte?`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -94,7 +104,7 @@ Estoy conectado directamente a la capa **Gold** de PostgreSQL con **Groq \`opena
       const botMessage: ChatMessage = {
         id: `bot-${Date.now()}`,
         role: 'assistant',
-        content: res.reply,
+        content: removeEmojis(res.reply),
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         model: res.model,
         latency_ms: res.latency_ms,
@@ -102,13 +112,13 @@ Estoy conectado directamente a la capa **Gold** de PostgreSQL con **Groq \`opena
 
       setMessages((prev) => [...prev, botMessage]);
       if (res.suggested_questions && res.suggested_questions.length > 0) {
-        setSuggestedQuestions(res.suggested_questions);
+        setSuggestedQuestions(res.suggested_questions.map((q) => removeEmojis(q)));
       }
     } catch (err: any) {
       const errorMessage: ChatMessage = {
         id: `err-${Date.now()}`,
         role: 'assistant',
-        content: `⚠️ **Error de Comunicación:** ${err.message || 'No fue posible obtener respuesta.'}`,
+        content: `**Error de Comunicación:** ${err.message || 'No fue posible obtener respuesta.'}`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -140,9 +150,10 @@ Estoy conectado directamente a la capa **Gold** de PostgreSQL con **Groq \`opena
   };
 
   const renderFormattedContent = (content: string) => {
+    const cleanContent = removeEmojis(content);
     return (
       <div className="space-y-1.5 text-xs leading-relaxed text-slate-800">
-        {content.split('\n').map((line, idx) => {
+        {cleanContent.split('\n').map((line, idx) => {
           const trimmed = line.trim();
           if (!trimmed) return <div key={idx} className="h-1" />;
 

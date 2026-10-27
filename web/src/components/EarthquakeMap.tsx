@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Earthquake } from '../types';
-import { RotateCcw, ExternalLink, Waves } from 'lucide-react';
+import { RotateCcw, ExternalLink, Waves, X } from 'lucide-react';
 
 interface EarthquakeMapProps {
   events: Earthquake[];
@@ -292,9 +292,10 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
             </div>
             <button
               onClick={() => setActiveEvent(null)}
-              className="text-slate-400 hover:text-slate-700 text-xs p-1 rounded-md"
+              aria-label="Cerrar detalle de sismo"
+              className="text-slate-400 hover:text-slate-700 p-1 rounded-md transition-colors"
             >
-              ✕
+              <X className="w-4 h-4" />
             </button>
           </div>
 
