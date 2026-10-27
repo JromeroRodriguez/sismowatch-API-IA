@@ -40,14 +40,9 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shadow-xs">
               <Activity className="w-5 h-5 text-white" />
             </div>
-            <div className="flex items-center space-x-2">
-              <span className="text-lg font-bold tracking-tight text-slate-900 font-sans">
-                SismoWatch
-              </span>
-              <span className="hidden sm:inline-block text-[11px] font-mono font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                Gold v1.0
-              </span>
-            </div>
+            <span className="text-lg font-bold tracking-tight text-slate-900 font-sans">
+              SismoWatch
+            </span>
           </button>
 
           {/* Navigation Tabs (SaaS Minimalist Pill style) */}
