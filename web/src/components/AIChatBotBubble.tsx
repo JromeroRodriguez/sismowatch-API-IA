@@ -78,6 +78,7 @@ type ParsedBlock =
   | { type: 'blockquote'; text: string }
   | { type: 'bullet'; text: string }
   | { type: 'number'; num: string; text: string }
+  | { type: 'hr' }
   | { type: 'paragraph'; text: string };
 
 const isTableRow = (line: string): boolean => {
@@ -128,6 +129,13 @@ const parseMarkdownBlocks = (rawText: string): ParsedBlock[] => {
     // 2. Blockquote
     if (line.startsWith('>')) {
       blocks.push({ type: 'blockquote', text: line.replace(/^>+\s*/, '') });
+      i++;
+      continue;
+    }
+
+    // 2b. Horizontal rule (---, ***, ___)
+    if (/^[-*_]{3,}$/.test(line)) {
+      blocks.push({ type: 'hr' });
       i++;
       continue;
     }
@@ -379,6 +387,10 @@ export const AIChatBotBubble: React.FC<AIChatBotBubbleProps> = ({ session }) => 
                 <div className="font-medium">{renderInlineFormatting(block.text)}</div>
               </div>
             );
+          }
+
+          if (block.type === 'hr') {
+            return <hr key={idx} className="my-3.5 border-slate-200" />;
           }
 
           if (block.type === 'bullet') {
@@ -654,7 +666,7 @@ export const AIChatBotBubble: React.FC<AIChatBotBubbleProps> = ({ session }) => 
                 </div>
               )}
 
-              <div ref={messagesEndRef} />
+              <div ref={messagesEndRef} className="h-6 shrink-0" />
             </div>
 
             {/* Input Box */}

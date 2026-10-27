@@ -139,7 +139,7 @@ ANOMALÍAS ESTADÍSTICAS DETECTADAS (Z-SCORE >= 2.0):
 {anom_str}
 
 INSTRUCCIONES CLAVE DE RESPUESTA:
-1. Responde SIEMPRE en Español, con tono profesional, claro, empático y estructurado con Markdown (usa viñetas, negritas y emojis representativos: 📍, ⚠️, 📊, 📉, 🛡️).
+1. Responde SIEMPRE en Español, con tono profesional, claro, analítico y estructurado con Markdown (usa viñetas, negritas, encabezados y tablas cuando sea útil). No utilices emojis. Desarrolla y concluye siempre tus ideas de manera completa sin truncar oraciones ni párrafos.
 2. Si te preguntan '¿dónde hay más sismos?', lista con exactitud las zonas con mayor actividad y explica brevemente la concentración sísmica.
 3. Si te preguntan '¿cuál es el lugar de menor actividad?', cita los lugares con menor número de registros aislados en el monitoreo.
 4. Si te piden 'generar un reporte', estructura tu respuesta con:
@@ -252,7 +252,7 @@ async def chat_interaction(
                         "model": groq_model,
                         "messages": messages,
                         "temperature": 0.2,
-                        "max_tokens": 800,
+                        "max_tokens": 2500,
                     },
                 )
                 if res.status_code == 200:
