@@ -7,14 +7,14 @@ import { EarthquakeMap } from './components/EarthquakeMap';
 import { ActivityCharts } from './components/ActivityCharts';
 import { EventsTable } from './components/EventsTable';
 import { PipelineModal } from './components/PipelineModal';
-import { AIChatBotView } from './components/AIChatBotView';
+import { AIChatBotBubble } from './components/AIChatBotBubble';
 import { AdminBackfillModal } from './components/AdminBackfillModal';
 import { LoginView } from './components/LoginView';
 import { AlertCircle, Bell, X } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [session, setSession] = useState<UserSession | null>(getStoredSession());
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'events' | 'pipeline' | 'ai-reports'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'events' | 'pipeline'>('dashboard');
 
   // Dashboard Data State
   const [kpis, setKpis] = useState<KPIsResponse | null>(null);
@@ -222,7 +222,7 @@ export const App: React.FC = () => {
         {/* Live Earthquake Floating Toast Notification */}
         {newEarthquakeToast && (
           <div 
-            className="fixed bottom-6 right-6 z-50 animate-bounce motion-reduce:animate-none glass-panel border border-amber-500/40 rounded-2xl p-4 shadow-glow-amber max-w-sm flex items-start space-x-3.5"
+            className="fixed bottom-6 left-6 z-40 animate-bounce motion-reduce:animate-none glass-panel border border-amber-500/40 rounded-2xl p-4 shadow-glow-amber max-w-sm flex items-start space-x-3.5"
             role="status"
             aria-live="polite"
           >
@@ -299,14 +299,7 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 3: ASISTENTE SÍSMICO IA (CHATBOT) */}
-        {activeTab === 'ai-reports' && (
-          <div className="space-y-6">
-            <AIChatBotView session={session} />
-          </div>
-        )}
-
-        {/* TAB 4: PIPELINE & CALIDAD */}
+        {/* TAB 3: PIPELINE & CALIDAD */}
         {activeTab === 'pipeline' && (
           <div className="space-y-6">
             <PipelineModal pipeline={pipeline} loading={loading} />
@@ -314,6 +307,9 @@ export const App: React.FC = () => {
         )}
 
       </main>
+
+      {/* Floating SismoBot AI Chat Bubble */}
+      <AIChatBotBubble session={session} />
 
       {/* Admin Backfill Modal */}
       {session.role === 'admin' && (

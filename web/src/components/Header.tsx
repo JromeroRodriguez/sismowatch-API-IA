@@ -9,8 +9,8 @@ interface HeaderProps {
   lastUpdated: string | null;
   onRefresh: () => void;
   isRefreshing: boolean;
-  activeTab: 'dashboard' | 'events' | 'pipeline' | 'ai-reports';
-  setActiveTab: (tab: 'dashboard' | 'events' | 'pipeline' | 'ai-reports') => void;
+  activeTab: 'dashboard' | 'events' | 'pipeline';
+  setActiveTab: (tab: 'dashboard' | 'events' | 'pipeline') => void;
   onOpenBackfill?: () => void;
 }
 
@@ -71,16 +71,6 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               Eventos & Exportación
-            </button>
-            <button
-              onClick={() => setActiveTab('ai-reports')}
-              className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                activeTab === 'ai-reports'
-                  ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-sm'
-                  : 'text-slate-350 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              Asistente IA (Chatbot)
             </button>
             <button
               onClick={() => setActiveTab('pipeline')}
@@ -191,14 +181,6 @@ export const Header: React.FC<HeaderProps> = ({
           }`}
         >
           Eventos
-        </button>
-        <button
-          onClick={() => setActiveTab('ai-reports')}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg shrink-0 ${
-            activeTab === 'ai-reports' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'text-slate-400'
-          }`}
-        >
-          IA & Anomalías
         </button>
         <button
           onClick={() => setActiveTab('pipeline')}
