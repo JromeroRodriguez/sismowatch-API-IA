@@ -108,39 +108,39 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
   }, [events, selectedEvent, onSelectEvent]);
 
   return (
-    <div className="relative rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-sm flex flex-col h-[460px]">
+    <div className="relative rounded-xl overflow-hidden glass-card shadow-lg flex flex-col h-[480px]">
       {/* Header bar */}
-      <div className="px-4 py-2.5 bg-slate-850 border-b border-slate-800 flex items-center justify-between z-10">
-        <div className="flex items-center space-x-2">
-          <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-200">
-            Distribución Geoespacial ({events.length} sismos)
+      <div className="px-5 py-3 glass-panel border-b border-white/10 flex items-center justify-between z-10">
+        <div className="flex items-center space-x-2.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-glow-amber animate-pulse motion-reduce:animate-none"></span>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-100 font-sans">
+            Distribución Geoespacial ({events.length} sismos detectados)
           </h3>
         </div>
 
         {/* Legend */}
-        <div className="hidden sm:flex items-center space-x-3 text-[11px] font-mono text-slate-400">
-          <span className="flex items-center space-x-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
-            <span>&lt; 3.0</span>
+        <div className="hidden sm:flex items-center space-x-4 text-xs font-mono text-slate-350">
+          <span className="flex items-center space-x-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block shadow-glow-emerald"></span>
+            <span>&lt; 3.0 Mw</span>
           </span>
-          <span className="flex items-center space-x-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
-            <span>3.0 - 4.4</span>
+          <span className="flex items-center space-x-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block shadow-glow-amber"></span>
+            <span>3.0 - 4.4 Mw</span>
           </span>
-          <span className="flex items-center space-x-1">
+          <span className="flex items-center space-x-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block"></span>
-            <span>4.5 - 5.9</span>
+            <span>4.5 - 5.9 Mw</span>
           </span>
-          <span className="flex items-center space-x-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
-            <span>&ge; 6.0</span>
+          <span className="flex items-center space-x-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block shadow-glow-rose"></span>
+            <span className="font-bold text-rose-300">&ge; 6.0 Mw</span>
           </span>
         </div>
       </div>
 
       {/* Map Container */}
-      <div ref={mapContainerRef} className="w-full flex-1 z-0" />
+      <div ref={mapContainerRef} className="w-full flex-1 z-0" aria-label="Mapa interactivo de sismos globales" role="region" />
     </div>
   );
 };

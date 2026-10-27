@@ -7,10 +7,10 @@ import { EarthquakeMap } from './components/EarthquakeMap';
 import { ActivityCharts } from './components/ActivityCharts';
 import { EventsTable } from './components/EventsTable';
 import { PipelineModal } from './components/PipelineModal';
-import { AIReportsView } from './components/AIReportsView';
+import { AIChatBotView } from './components/AIChatBotView';
 import { AdminBackfillModal } from './components/AdminBackfillModal';
 import { LoginView } from './components/LoginView';
-import { AlertCircle, Bell } from 'lucide-react';
+import { AlertCircle, Bell, X } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [session, setSession] = useState<UserSession | null>(getStoredSession());
@@ -194,14 +194,14 @@ export const App: React.FC = () => {
         
         {/* Error Alert Banner */}
         {error && (
-          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center justify-between shadow-sm">
-            <div className="flex items-center space-x-2">
+          <div className="p-4 rounded-xl glass-panel border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between shadow-lg" role="alert">
+            <div className="flex items-center space-x-2.5">
               <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
-              <span>{error}</span>
+              <span className="font-medium">{error}</span>
             </div>
             <button
               onClick={() => loadAllData()}
-              className="px-3 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-medium transition"
+              className="px-3.5 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-100 font-semibold transition focus-visible:ring-2 focus-visible:ring-rose-400"
             >
               Reintentar
             </button>
@@ -210,19 +210,32 @@ export const App: React.FC = () => {
 
         {/* Live Earthquake Floating Toast Notification */}
         {newEarthquakeToast && (
-          <div className="fixed bottom-6 right-6 z-50 animate-bounce bg-slate-900 border border-amber-500/40 rounded-xl p-4 shadow-2xl max-w-sm flex items-start space-x-3">
-            <div className="p-2 rounded-lg bg-amber-500/20 text-amber-400">
-              <Bell className="w-5 h-5 animate-pulse" />
+          <div 
+            className="fixed bottom-6 right-6 z-50 animate-bounce motion-reduce:animate-none glass-panel border border-amber-500/40 rounded-2xl p-4 shadow-glow-amber max-w-sm flex items-start space-x-3.5"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 shrink-0">
+              <Bell className="w-5 h-5 animate-pulse motion-reduce:animate-none" />
             </div>
-            <div>
-              <div className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center space-x-1">
-                <span>Nuevo Sismo Registrado (SSE)</span>
+            <div className="flex-1 pr-1">
+              <div className="text-[11px] font-bold text-amber-400 uppercase tracking-wider flex items-center justify-between">
+                <span>Nuevo Sismo en Vivo (SSE)</span>
               </div>
-              <p className="text-xs text-white font-medium mt-0.5">{newEarthquakeToast.place}</p>
-              <div className="text-[11px] text-slate-400 font-mono mt-1">
-                Mag: <b className="text-amber-400">{newEarthquakeToast.mag?.toFixed(1)} Mw</b> &bull; Prof: {newEarthquakeToast.depth_km} km
+              <p className="text-xs text-white font-semibold mt-1 leading-snug">{newEarthquakeToast.place}</p>
+              <div className="text-xs text-slate-300 font-mono mt-1.5 flex items-center space-x-2">
+                <span>Mag: <b className="text-amber-400 font-bold">{newEarthquakeToast.mag?.toFixed(1)} Mw</b></span>
+                <span className="text-slate-500">&bull;</span>
+                <span>Prof: {newEarthquakeToast.depth_km} km</span>
               </div>
             </div>
+            <button
+              onClick={() => setNewEarthquakeToast(null)}
+              aria-label="Cerrar notificación"
+              className="p-1 text-slate-400 hover:text-white rounded-lg transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
@@ -274,16 +287,10 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 3: AI REPORTS & ANOMALIES */}
+        {/* TAB 3: ASISTENTE SÍSMICO IA (CHATBOT) */}
         {activeTab === 'ai-reports' && (
           <div className="space-y-6">
-            <AIReportsView
-              reports={reports}
-              anomalies={anomalies}
-              session={session}
-              onRefresh={() => loadAllData(true)}
-              loading={loading}
-            />
+            <AIChatBotView session={session} />
           </div>
         )}
 

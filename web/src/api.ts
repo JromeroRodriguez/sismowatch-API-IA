@@ -183,3 +183,26 @@ export async function downloadExport(format: 'csv' | 'pdf', minMag?: number) {
   window.URL.revokeObjectURL(url);
   document.body.removeChild(a);
 }
+
+export async function sendChatMessage(
+  message: string,
+  history: Array<{ role: 'user' | 'assistant'; content: string }> = []
+): Promise<import('./types').ChatResponse> {
+  const resp = await fetch(`${API_BASE}/api/chat`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ message, history }),
+  });
+
+  if (resp.status === 401) {
+    clearSession();
+    window.location.reload();
+  }
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ detail: 'Error al comunicarse con SismoBot' }));
+    throw new Error(err.detail || 'Fallo en la comunicación con SismoBot');
+  }
+
+  return resp.json();
+}

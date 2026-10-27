@@ -104,3 +104,20 @@ export interface UserSession {
   role: 'admin' | 'viewer';
   token: string;
 }
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  model?: string;
+  latency_ms?: number;
+}
+
+export interface ChatResponse {
+  reply: string;
+  suggested_questions: string[];
+  model: string;
+  latency_ms: number;
+  context_used?: Record<string, any>;
+}

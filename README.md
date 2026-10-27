@@ -99,6 +99,7 @@ python3 openmetadata/run_ingestion.py
 | Conectarse al stream en vivo SSE (`/api/stream`) | ✅ | ✅ |
 | Descargar Reportes CSV y PDF (`/api/reports/export`) | ✅ | ✅ |
 | Leer Reporte Ejecutivo de IA y Anomalías | ✅ | ✅ |
+| **Interactuar con SismoBot Chatbot (`/api/chat`)** | ✅ | ✅ |
 | **Disparar Backfill Histórico en Airflow (`/api/admin/backfill`)** | ❌ *(HTTP 403 Forbidden)* | ✅ *(HTTP 200/201 Queued)* |
 
 ---
@@ -120,15 +121,22 @@ El pipeline ejecuta contratos de datos declarativos mediante `Pandera` en cada l
 
 ---
 
-## 6. Inteligencia Artificial y Detección de Anomalías
+## 6. Inteligencia Artificial y SismoBot (Chatbot Sísmico en Vivo)
 
-* **Proveedor:** **Groq Cloud API** con procesadores LPU.
-* **Modelo:** `openai/gpt-oss-120b` (120B parámetros con salida JSON estructurada).
+* **Proveedor:** **Groq Cloud API** con procesadores LPU (ultra-baja latencia $<2$s).
+* **Modelo:** `openai/gpt-oss-120b` (120B parámetros con salida estructurada).
+* **Asistente Conversacional SismoBot (`POST /api/chat`):**
+  - Permite a los usuarios consultar en lenguaje natural en tiempo real:
+    - *📍 "¿Dónde hay más sismos?"* (ranking de concentración sísmica).
+    - *📉 "¿Cuál es el lugar con menor actividad?"* (zonas de baja recurrencia o sismos aislados).
+    - *📊 "Genérame un reporte ejecutivo"* (resumen 24h con eventos destacados y recomendaciones).
+    - *⚠️ "¿Qué anomalías se han detectado?"* (outliers Z-Score $\ge 2.0$).
+  - **Inyección de Hechos Verificados (Ground-Truth Context):** Antes de llamar a Groq, el backend extrae estadísticas y rankings de la capa Gold (`gold.earthquakes`) conectándose de manera segura con `sismo_readonly`.
 * **Protección Anti-Inyección (OWASP LLM01):** Sanitización estricta de cadenas de texto libre para neutralizar instrucciones maliciosas o caracteres invisibles.
-* **Barandilla Anti-Alucinación:** Python calcula los datos duros exactos (total de sismos, magnitud máxima, zona principal) y verifica que el texto emitido por el modelo coincida matemáticamente con la base de datos antes de publicarlo.
+* **Barandilla Anti-Alucinación:** Python calcula los datos duros exactos y el modelo se ciñe a ellos.
 * **Detección Estadística de Anomalías:** Algoritmo **Z-Score** ($z \ge 2.0$) que contrasta los eventos de las últimas 24 horas frente a la distribución histórica de magnitud y profundidad, persistiendo los eventos extremos en `gold.ai_anomalies`.
 * **Failover Determinista (Plan B):** En caso de caída de internet o timeout del LLM, el pipeline autogenera un análisis técnico analítico garantizando cero roturas.
-* **Auditoría de Costos:** Cada reporte registra latencia en milisegundos, tokens de entrada/salida y costo estimado en dólares estadounidenses en la tabla `gold.ai_reports`.
+* **Auditoría de Costos y Telemetría:** Cada interacción reporta latencia en milisegundos, modelo utilizado y tokens.
 
 ---
 
@@ -140,7 +148,7 @@ Se incluye una suite completa de pruebas unitarias, de integración y de segurid
 ./run_tests.sh
 ```
 
-### Cobertura de las 15 Pruebas:
+### Cobertura de las 16 Pruebas:
 1. **Transformaciones (`airflow/tests/test_transformations.py`):**
    - Conversión precisa de timestamps Epoch en milisegundos a objetos `datetime` UTC.
    - Normalización de GeoJSON anidado a columnas atómicas planas con manejo de geometrías nulas.
@@ -159,6 +167,7 @@ Se incluye una suite completa de pruebas unitarias, de integración y de segurid
    - Acceso exitoso del rol `viewer` a endpoints de lectura (`/api/kpis`, `/api/events`, etc.).
    - **Prueba Crítica de Seguridad RBAC:** Rechazo con **HTTP 403 Forbidden** cuando un usuario `viewer` intenta invocar la ruta administrativa `/api/admin/backfill`.
    - Ejecución exitosa de la ruta de backfill para el rol `admin`.
+   - **Prueba del Chatbot Sísmico:** Validación de `POST /api/chat` respondiendo consultas en lenguaje natural con métricas vivas de Gold.
 
 ---
 
@@ -205,10 +214,10 @@ Para documentar la entrega del proyecto, se sugiere capturar las siguientes evid
    - Los 4 KPIs superiores (Total Eventos 24h, Sismo Mayor, Calidad del Dato Pandera, Alertas de Tsunami).
    - Mapa interactivo con círculos coloreados por magnitud y tooltips al pasar el mouse.
    - Gráfico de actividad temporal y tabla paginada con filtros.
-2. **Pestaña de Inteligencia con IA (`http://localhost:3000` -> Tab 'Inteligencia IA & Anomalías'):**
-   - Visualización del Reporte Ejecutivo Diario generado por `openai/gpt-oss-120b`.
-   - Métricas de telemetría: Tokens usados (~1400), latencia (~4000ms), costo (~$0.000216 USD).
-   - Tabla de anomalías estadísticas detectadas por el algoritmo Z-Score.
+2. **Pestaña del Asistente Sísmico IA (`http://localhost:3000` -> Tab 'Asistente IA'):**
+   - Interacción conversacional con SismoBot potenciado por `openai/gpt-oss-120b` en Groq.
+   - Consultas demostradas: "¿Dónde hay más sismos?", "¿Cuál es el lugar con menor actividad?", "Genérame un reporte ejecutivo".
+   - Telemetría en vivo: latencia en ms, modelo utilizado y sugerencias contextuales.
 3. **Modal de Backfill Administrativo:**
    - Iniciar sesión como `admin` y abrir el modal "Disparar Backfill".
    - Iniciar sesión como `viewer` y evidenciar que el botón no está disponible o la llamada devuelve 403.
@@ -224,7 +233,7 @@ Para documentar la entrega del proyecto, se sugiere capturar las siguientes evid
    - Exploración de las tablas en los esquemas `bronze`, `silver` y `gold`.
    - Diagrama de linaje mostrando la relación `bronze` -> `silver` -> `gold`.
 6. **Consola de Pruebas Automatizadas:**
-   - Terminal ejecutando `./run_tests.sh` mostrando `15 passed in X.XXs (100%)`.
+   - Terminal ejecutando `./run_tests.sh` mostrando `16 passed in X.XXs (100%)`.
    - Terminal ejecutando el escaneo de **Gitleaks** mostrando `no leaks found`.
 
 ---
@@ -267,6 +276,7 @@ Para documentar la entrega del proyecto, se sugiere capturar las siguientes evid
 │   │   ├── auth.py                        # Endpoint /auth/login
 │   │   ├── earthquakes.py                 # KPIs, listado paginado y series temporales
 │   │   ├── reports.py                     # Exportación CSV y PDF
+│   │   ├── chat.py                        # Endpoint conversacional SismoBot con Groq AI
 │   │   ├── stream.py                      # Canal Server-Sent Events en vivo
 │   │   └── admin.py                       # Disparo de backfill (Solo Admin)
 │   ├── Dockerfile
@@ -280,7 +290,7 @@ Para documentar la entrega del proyecto, se sugiere capturar las siguientes evid
 │   │   │   ├── EarthquakeMap.tsx          # Mapa interactivo Leaflet
 │   │   │   ├── ActivityChart.tsx          # Gráficos de barras y líneas
 │   │   │   ├── EarthquakesTable.tsx       # Tabla paginada con filtros y exportación
-│   │   │   ├── AIReportsView.tsx          # Pestaña de IA y anomalías Z-Score
+│   │   │   ├── AIChatBotView.tsx          # Asistente sísmico conversacional SismoBot
 │   │   │   └── BackfillModal.tsx          # Modal de ejecución de backfill
 │   │   └── types.ts                       # Tipos TypeScript
 │   ├── Dockerfile

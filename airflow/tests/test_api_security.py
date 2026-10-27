@@ -105,3 +105,20 @@ def test_admin_can_access_admin_route(api_client, admin_token):
     )
     assert resp.status_code in [200, 201]
     assert resp.json().get("status") in ["success", "queued"]
+
+
+def test_chatbot_endpoint_returns_ground_truth_answer(api_client, viewer_token):
+    """Test POST /api/chat handles natural language questions using live gold metrics."""
+    headers = {"Authorization": f"Bearer {viewer_token}"}
+    resp = api_client.post(
+        "/api/chat",
+        json={"message": "¿Dónde hay más sismos?"},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "reply" in data
+    assert len(data["reply"]) > 20
+    assert "model" in data
+    assert "latency_ms" in data
+    assert isinstance(data.get("suggested_questions"), list)

@@ -26,63 +26,68 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenBackfill,
 }) => {
   return (
-    <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur border-b border-slate-800 text-slate-100 shadow-md">
+    <header className="sticky top-0 z-40 glass-panel border-b border-white/10 text-slate-100 shadow-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         
         {/* Left: Brand + Navigation */}
         <div className="flex items-center space-x-6">
-          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+          <button
+            type="button"
+            className="flex items-center space-x-3 text-left focus-visible:ring-2 focus-visible:ring-amber-500 rounded-xl"
+            onClick={() => setActiveTab('dashboard')}
+            aria-label="Ir al Dashboard de SismoWatch"
+          >
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center shadow-lg shadow-amber-500/25">
               <Activity className="w-6 h-6 text-slate-950 font-bold" />
             </div>
             <div>
-              <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-amber-400 via-rose-300 to-slate-100 bg-clip-text text-transparent">
+              <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-amber-400 via-rose-300 to-slate-100 bg-clip-text text-transparent">
                 SismoWatch
               </span>
-              <span className="hidden sm:inline-block ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-slate-850 text-amber-400 border border-slate-700">
+              <span className="hidden sm:inline-block ml-2 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-850/80 text-amber-400 border border-amber-500/20">
                 Gold v1.0
               </span>
             </div>
-          </div>
+          </button>
 
           {/* Navigation Tabs */}
-          <nav className="hidden md:flex space-x-1">
+          <nav aria-label="Navegación principal" className="hidden md:flex space-x-1.5 bg-slate-950/60 p-1 rounded-xl border border-white/5">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                 activeTab === 'dashboard'
-                  ? 'bg-slate-800 text-amber-400 border border-slate-700'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
+                  ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-sm'
+                  : 'text-slate-350 hover:text-white hover:bg-slate-800/60'
               }`}
             >
               Dashboard
             </button>
             <button
               onClick={() => setActiveTab('events')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                 activeTab === 'events'
-                  ? 'bg-slate-800 text-amber-400 border border-slate-700'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
+                  ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-sm'
+                  : 'text-slate-350 hover:text-white hover:bg-slate-800/60'
               }`}
             >
               Eventos & Exportación
             </button>
             <button
               onClick={() => setActiveTab('ai-reports')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                 activeTab === 'ai-reports'
-                  ? 'bg-slate-800 text-amber-400 border border-slate-700'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
+                  ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-sm'
+                  : 'text-slate-350 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              IA & Anomalías
+              Asistente IA (Chatbot)
             </button>
             <button
               onClick={() => setActiveTab('pipeline')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                 activeTab === 'pipeline'
-                  ? 'bg-slate-800 text-amber-400 border border-slate-700'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
+                  ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-sm'
+                  : 'text-slate-350 hover:text-white hover:bg-slate-800/60'
               }`}
             >
               Pipeline & Calidad
@@ -94,28 +99,33 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center space-x-3">
           
           {/* SSE Live Status Indicator */}
-          <div className="flex items-center space-x-2 px-2.5 py-1 rounded-full bg-slate-850 border border-slate-800 text-xs font-medium">
-            <span className="relative flex h-2.5 w-2.5">
+          <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-white/10 text-xs font-medium shadow-inner">
+            <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
               {sseConnected ? (
                 <>
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="animate-ping motion-reduce:animate-none absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                 </>
               ) : (
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
               )}
             </span>
-            <span className={sseConnected ? 'text-emerald-400 text-xs font-mono font-semibold' : 'text-amber-400 text-xs font-mono'}>
+            <span className={sseConnected ? 'text-emerald-400 text-xs font-mono font-bold tracking-wider' : 'text-amber-400 text-xs font-mono tracking-wider'}>
               {sseConnected ? 'EN VIVO' : 'CONECTANDO...'}
             </span>
+            {lastUpdated && (
+              <span className="hidden lg:inline text-[10px] text-slate-400 font-mono border-l border-slate-700 pl-2">
+                {lastUpdated}
+              </span>
+            )}
           </div>
 
           {/* Refresh button */}
           <button
             onClick={onRefresh}
             disabled={isRefreshing}
-            title="Actualizar datos ahora"
-            className="p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition"
+            aria-label="Actualizar datos de sismología ahora"
+            className="p-2 min-h-[38px] min-w-[38px] flex items-center justify-center rounded-xl bg-slate-850 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white transition focus-visible:ring-2 focus-visible:ring-amber-500"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-amber-400' : ''}`} />
           </button>
@@ -124,7 +134,7 @@ export const Header: React.FC<HeaderProps> = ({
           {session.role === 'admin' && onOpenBackfill && (
             <button
               onClick={onOpenBackfill}
-              className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-xs transition shadow-md shadow-amber-500/10"
+              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition shadow-md shadow-amber-500/20 focus-visible:ring-2 focus-visible:ring-amber-400"
             >
               <Zap className="w-3.5 h-3.5" />
               <span>Backfill Airflow</span>
@@ -132,18 +142,18 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* User Badge */}
-          <div className="flex items-center space-x-2 pl-2 border-l border-slate-800">
+          <div className="flex items-center space-x-2 pl-3 border-l border-white/10">
             <div className="hidden sm:block text-right">
-              <div className="text-xs font-medium text-slate-200">{session.username}</div>
-              <div className="text-[10px] uppercase font-mono tracking-wider font-semibold">
+              <div className="text-xs font-semibold text-slate-100">{session.username}</div>
+              <div className="text-[10px] uppercase font-mono tracking-wider font-bold">
                 {session.role === 'admin' ? (
                   <span className="text-rose-400 flex items-center justify-end space-x-1">
-                    <ShieldCheck className="w-2.5 h-2.5" />
+                    <ShieldCheck className="w-3 h-3" />
                     <span>ADMIN</span>
                   </span>
                 ) : (
                   <span className="text-sky-400 flex items-center justify-end space-x-1">
-                    <Eye className="w-2.5 h-2.5" />
+                    <Eye className="w-3 h-3" />
                     <span>VIEWER</span>
                   </span>
                 )}
@@ -153,8 +163,8 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Logout button */}
             <button
               onClick={onLogout}
-              title="Cerrar sesión"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition"
+              aria-label="Cerrar sesión de SismoWatch"
+              className="p-2 min-h-[38px] min-w-[38px] flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-400 hover:bg-slate-800/80 transition focus-visible:ring-2 focus-visible:ring-rose-500"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -162,6 +172,42 @@ export const Header: React.FC<HeaderProps> = ({
 
         </div>
 
+      </div>
+
+      {/* Mobile Tab Sub-bar */}
+      <div className="md:hidden flex overflow-x-auto px-4 py-2 space-x-2 border-t border-white/5 bg-slate-950/80">
+        <button
+          onClick={() => setActiveTab('dashboard')}
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg shrink-0 ${
+            activeTab === 'dashboard' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'text-slate-400'
+          }`}
+        >
+          Dashboard
+        </button>
+        <button
+          onClick={() => setActiveTab('events')}
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg shrink-0 ${
+            activeTab === 'events' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'text-slate-400'
+          }`}
+        >
+          Eventos
+        </button>
+        <button
+          onClick={() => setActiveTab('ai-reports')}
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg shrink-0 ${
+            activeTab === 'ai-reports' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'text-slate-400'
+          }`}
+        >
+          IA & Anomalías
+        </button>
+        <button
+          onClick={() => setActiveTab('pipeline')}
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg shrink-0 ${
+            activeTab === 'pipeline' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'text-slate-400'
+          }`}
+        >
+          Pipeline
+        </button>
       </div>
     </header>
   );

@@ -9,7 +9,7 @@ from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from database import fetch_one
-from routers import admin, auth, earthquakes, pipeline, reports, stream
+from routers import admin, auth, chat, earthquakes, pipeline, reports, stream
 
 # Setup logging
 logging.basicConfig(
@@ -39,6 +39,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(earthquakes.router)
 app.include_router(reports.router)
+app.include_router(chat.router)
 app.include_router(pipeline.router)
 app.include_router(stream.router)
 app.include_router(admin.router)

@@ -141,3 +141,22 @@ class TriggerResponse(BaseModel):
     dag_id: str
     run_id: Optional[str] = None
     status: str
+
+
+# --- Chatbot Schemas ---
+class ChatHistoryItem(BaseModel):
+    role: str = Field(..., description="'user' o 'assistant'")
+    content: str
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=1000, description="Pregunta del usuario")
+    history: Optional[List[ChatHistoryItem]] = Field(default=[], description="Historial previo de la conversación")
+
+
+class ChatResponse(BaseModel):
+    reply: str
+    suggested_questions: List[str] = []
+    model: str
+    latency_ms: int
+    context_used: Optional[Dict[str, Any]] = None

@@ -32,6 +32,10 @@ class Settings:
     AIRFLOW_ADMIN_USER: str = os.getenv("_AIRFLOW_WWW_USER_USERNAME", "sismo_admin")
     AIRFLOW_ADMIN_PASSWORD: str = os.getenv("_AIRFLOW_WWW_USER_PASSWORD", "admin123")
 
+    # Groq AI Assistant
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+
     # CORS settings
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
