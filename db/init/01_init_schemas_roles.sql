@@ -20,13 +20,19 @@ CREATE SCHEMA IF NOT EXISTS gold;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'sismo_ingest') THEN
-        CREATE USER sismo_ingest WITH PASSWORD 'IngestSecret2026!Pass';
+        CREATE USER sismo_ingest WITH PASSWORD 'admin123';
+    ELSE
+        ALTER USER sismo_ingest WITH PASSWORD 'admin123';
     END IF;
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'sismo_transform') THEN
-        CREATE USER sismo_transform WITH PASSWORD 'TransformSecret2026!Pass';
+        CREATE USER sismo_transform WITH PASSWORD 'admin123';
+    ELSE
+        ALTER USER sismo_transform WITH PASSWORD 'admin123';
     END IF;
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'sismo_readonly') THEN
-        CREATE USER sismo_readonly WITH PASSWORD 'ReadonlySecret2026!Pass';
+        CREATE USER sismo_readonly WITH PASSWORD 'admin123';
+    ELSE
+        ALTER USER sismo_readonly WITH PASSWORD 'admin123';
     END IF;
 END
 $$;
