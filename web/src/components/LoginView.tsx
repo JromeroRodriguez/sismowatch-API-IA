@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, ShieldCheck, Eye, Lock, User, AlertCircle } from 'lucide-react';
+import { Activity, Lock, User, AlertCircle } from 'lucide-react';
 import { loginUser } from '../api';
 import { UserSession } from '../types';
 
@@ -89,7 +89,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="admin123"
+                placeholder="••••••••"
                 autoComplete="current-password"
                 className="w-full pl-10 pr-3 py-2.5 min-h-[42px] bg-white border border-slate-300 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition font-medium"
               />
@@ -99,40 +99,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 min-h-[42px] rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs tracking-wide transition shadow-xs disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-blue-600"
+            className="w-full py-2.5 min-h-[42px] rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs tracking-wide transition shadow-xs disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-blue-600 cursor-pointer"
           >
             {loading ? 'Verificando credenciales...' : 'Iniciar Sesión'}
           </button>
         </form>
-
-        {/* Quick Presets Divider */}
-        <div className="mt-6 pt-5 border-t border-slate-100">
-          <div className="text-[11px] text-slate-400 text-center uppercase tracking-wider font-semibold mb-3 font-mono">
-            Acceso Rápido para Demostración
-          </div>
-
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              type="button"
-              onClick={() => handleLogin('admin', 'admin123')}
-              disabled={loading}
-              className="flex items-center justify-center space-x-2 py-2 px-3 min-h-[38px] rounded-lg bg-purple-50 hover:bg-purple-100/70 border border-purple-200 text-purple-700 text-xs font-semibold transition focus-visible:ring-2 focus-visible:ring-purple-500 disabled:opacity-50"
-            >
-              <ShieldCheck className="w-4 h-4 text-purple-600" />
-              <span>Rol ADMIN</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleLogin('viewer', 'admin123')}
-              disabled={loading}
-              className="flex items-center justify-center space-x-2 py-2 px-3 min-h-[38px] rounded-lg bg-blue-50 hover:bg-blue-100/70 border border-blue-200 text-blue-700 text-xs font-semibold transition focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50"
-            >
-              <Eye className="w-4 h-4 text-blue-600" />
-              <span>Rol VIEWER</span>
-            </button>
-          </div>
-        </div>
 
       </div>
     </div>
