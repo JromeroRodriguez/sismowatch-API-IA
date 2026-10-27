@@ -1,4 +1,4 @@
-# SismoWatch 🌍⚡
+# SismoWatch
 
 > **Plataforma de Monitoreo Sísmico en Tiempo Real, Control Automatizado de Calidad e Inteligencia Diaria con IA**  
 > *Prueba de Desempeño Técnico - Ruta de IA y Automatización*
@@ -92,18 +92,18 @@ python3 openmetadata/run_ingestion.py
 
 | Módulo / Acción | Rol `viewer` | Rol `admin` |
 | :--- | :---: | :---: |
-| Iniciar sesión y obtener JWT (`/auth/login`) | ✅ | ✅ |
-| Consultar KPIs y Estadísticas (`/api/kpis`) | ✅ | ✅ |
-| Visualizar Mapa y Listado de Sismos (`/api/events`) | ✅ | ✅ |
-| Consultar Series de Tiempo (`/api/stats/timeseries`) | ✅ | ✅ |
-| Conectarse al stream en vivo SSE (`/api/stream`) | ✅ | ✅ |
-| Descargar Reportes CSV y PDF (`/api/reports/export`) | ✅ | ✅ |
-| Leer Reporte Ejecutivo de IA y Anomalías (`/api/reports`) | ✅ | ✅ |
-| Ver Estado del Pipeline y Calidad (`/api/pipeline/status`) | ✅ *(Resumen)* | ✅ *(Detalle)* |
-| **Interactuar con SismoBot Chatbot (`/api/chat`)** | ✅ | ✅ |
-| **Consultar Registros en Cuarentena (`/api/quality/quarantine`)** | ❌ *(HTTP 403 Forbidden)* | ✅ *(HTTP 200 OK)* |
-| **Regenerar Reporte IA (`/api/admin/reports/regenerate`)** | ❌ *(HTTP 403 Forbidden)* | ✅ *(HTTP 200/201 Queued)* |
-| **Disparar Backfill Histórico en Airflow (`/api/admin/backfill`)** | ❌ *(HTTP 403 Forbidden)* | ✅ *(HTTP 200/201 Queued)* |
+| Iniciar sesión y obtener JWT (`/auth/login`) | Sí | Sí |
+| Consultar KPIs y Estadísticas (`/api/kpis`) | Sí | Sí |
+| Visualizar Mapa y Listado de Sismos (`/api/events`) | Sí | Sí |
+| Consultar Series de Tiempo (`/api/stats/timeseries`) | Sí | Sí |
+| Conectarse al stream en vivo SSE (`/api/stream`) | Sí | Sí |
+| Descargar Reportes CSV y PDF (`/api/reports/export`) | Sí | Sí |
+| Leer Reporte Ejecutivo de IA y Anomalías (`/api/reports`) | Sí | Sí |
+| Ver Estado del Pipeline y Calidad (`/api/pipeline/status`) | Sí *(Resumen)* | Sí *(Detalle)* |
+| **Interactuar con SismoBot Chatbot (`/api/chat`)** | Sí | Sí |
+| **Consultar Registros en Cuarentena (`/api/quality/quarantine`)** | No *(HTTP 403 Forbidden)* | Sí *(HTTP 200 OK)* |
+| **Regenerar Reporte IA (`/api/admin/reports/regenerate`)** | No *(HTTP 403 Forbidden)* | Sí *(HTTP 200/201 Queued)* |
+| **Disparar Backfill Histórico en Airflow (`/api/admin/backfill`)** | No *(HTTP 403 Forbidden)* | Sí *(HTTP 200/201 Queued)* |
 
 ---
 
@@ -130,10 +130,10 @@ El pipeline ejecuta contratos de datos declarativos mediante `Pandera` en cada l
 * **Modelo:** `openai/gpt-oss-120b` (120B parámetros con salida estructurada).
 * **Asistente Conversacional SismoBot (`POST /api/chat`):**
   - Permite a los usuarios consultar en lenguaje natural en tiempo real:
-    - *📍 "¿Dónde hay más sismos?"* (ranking de concentración sísmica).
-    - *📉 "¿Cuál es el lugar con menor actividad?"* (zonas de baja recurrencia o sismos aislados).
-    - *📊 "Genérame un reporte ejecutivo"* (resumen 24h con eventos destacados y recomendaciones).
-    - *⚠️ "¿Qué anomalías se han detectado?"* (outliers Z-Score $\ge 2.0$).
+    - *"- ¿Dónde hay más sismos?"* (ranking de concentración sísmica).
+    - *"- ¿Cuál es el lugar con menor actividad?"* (zonas de baja recurrencia o sismos aislados).
+    - *"- Genérame un reporte ejecutivo"* (resumen 24h con eventos destacados y recomendaciones).
+    - *"- ¿Qué anomalías se han detectado?"* (outliers Z-Score $\ge 2.0$).
   - **Inyección de Hechos Verificados (Ground-Truth Context):** Antes de llamar a Groq, el backend extrae estadísticas y rankings de la capa Gold (`gold.earthquakes`) conectándose de manera segura con `sismo_readonly`.
 * **Protección Anti-Inyección (OWASP LLM01):** Sanitización estricta de cadenas de texto libre para neutralizar instrucciones maliciosas o caracteres invisibles.
 * **Barandilla Anti-Alucinación:** Python calcula los datos duros exactos y el modelo se ciñe a ellos.
@@ -189,7 +189,7 @@ docker run --rm -v "$(pwd):/path" zricethezav/gitleaks:latest detect --source="/
 3:15PM INF scanned ~361834 bytes (361.83 KB) in 82.6ms
 3:15PM INF no leaks found
 ```
-> **Estado:** ✅ **0 FUGAS DE SECRETOS EN EL HISTORIAL DE GIT.**
+> **Estado:** **0 FUGAS DE SECRETOS EN EL HISTORIAL DE GIT.**
 
 ### 8.2 Escaneo de Vulnerabilidades con Bandit
 Se ejecutó el analizador de seguridad estática **Bandit** sobre el código fuente de las canalizaciones de datos y la API:
@@ -205,7 +205,7 @@ Test results: No issues identified.
 Total lines of code scanned: 2528
 Total issues: Medium: 0, High: 0
 ```
-> **Estado:** ✅ **0 VULNERABILIDADES MEDIAS O ALTAS DETECTADAS.**
+> **Estado:** **0 VULNERABILIDADES MEDIAS O ALTAS DETECTADAS.**
 
 ---
 
