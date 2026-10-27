@@ -11,17 +11,16 @@ interface EarthquakeMapProps {
   loading?: boolean;
 }
 
-type BaseMapType = 'light' | 'satellite';
+type BaseMapType = 'dark' | 'satellite';
 
 const BASEMAP_TILES: Record<BaseMapType, { url: string; attribution: string; subdomains?: string[] }> = {
-  light: {
-    // CartoDB Positron - Clean minimal light basemap perfect for SaaS dashboards
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    subdomains: ['a', 'b', 'c', 'd'],
+  dark: {
+    // ESRI World Dark Gray Base - Clean, high contrast cartography
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
   },
   satellite: {
-    // ESRI World Imagery
+    // ESRI World Imagery - High-resolution satellite view
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attribution: '&copy; Esri, Maxar, Earthstar Geographics',
   },
@@ -37,15 +36,16 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
   const activeTileLayerRef = useRef<L.TileLayer | null>(null);
+  const referenceLayerRef = useRef<L.TileLayer | null>(null);
 
   const [activeEvent, setActiveEvent] = useState<Earthquake | null>(selectedEvent);
-  const [currentBaseMap, setCurrentBaseMap] = useState<BaseMapType>('light');
+  const [currentBaseMap, setCurrentBaseMap] = useState<BaseMapType>('dark');
 
   useEffect(() => {
     setActiveEvent(selectedEvent);
   }, [selectedEvent]);
 
-  // 1. Initialize Leaflet Map once
+  // 1. Initialize Leaflet Map once with Dark theme
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
@@ -59,14 +59,20 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
 
     L.control.zoom({ position: 'topright' }).addTo(map);
 
-    // Initial Base Tiles (CartoDB Positron Light)
-    const baseConfig = BASEMAP_TILES['light'];
+    // Initial Base Tiles (ESRI Dark Gray)
+    const baseConfig = BASEMAP_TILES['dark'];
     const baseLayer = L.tileLayer(baseConfig.url, {
       attribution: baseConfig.attribution,
-      subdomains: baseConfig.subdomains || ['a', 'b', 'c'],
       maxZoom: 18,
     }).addTo(map);
     activeTileLayerRef.current = baseLayer;
+
+    // Add boundaries and reference labels for dark map
+    const refLayer = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 18, opacity: 0.8 }
+    ).addTo(map);
+    referenceLayerRef.current = refLayer;
 
     const layerGroup = L.layerGroup().addTo(map);
     layerGroupRef.current = layerGroup;
@@ -88,14 +94,18 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
     };
   }, []);
 
-  // 2. Switch Basemap Layer dynamically
+  // 2. Switch Basemap Layer dynamically (Oscuro / Satelite)
   const switchBaseMap = (type: BaseMapType) => {
     if (!mapInstanceRef.current) return;
     const map = mapInstanceRef.current;
 
-    // Remove existing tile layer
+    // Remove existing tile layer and reference layer
     if (activeTileLayerRef.current) {
       map.removeLayer(activeTileLayerRef.current);
+    }
+    if (referenceLayerRef.current) {
+      map.removeLayer(referenceLayerRef.current);
+      referenceLayerRef.current = null;
     }
 
     const cfg = BASEMAP_TILES[type];
@@ -108,6 +118,18 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
     // Send tile layer to back so earthquake markers stay on top
     newBase.bringToBack();
     activeTileLayerRef.current = newBase;
+
+    // If dark mode, add reference boundaries
+    if (type === 'dark') {
+      const ref = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 18, opacity: 0.8 }
+      ).addTo(map);
+      ref.bringToBack();
+      newBase.bringToBack();
+      referenceLayerRef.current = ref;
+    }
+
     setCurrentBaseMap(type);
   };
 
@@ -121,17 +143,17 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
       if (typeof ev.latitude !== 'number' || typeof ev.longitude !== 'number') return;
 
       const mag = ev.mag || 0;
-      let color = '#16A34A'; // Green: < 3.0
+      let color = '#10B981'; // Green: < 3.0
       let radius = 5;
 
       if (mag >= 6.0) {
-        color = '#DC2626'; // Red: >= 6.0
+        color = '#EF4444'; // Red: >= 6.0
         radius = 12;
       } else if (mag >= 4.5) {
-        color = '#EA580C'; // Orange: 4.5 - 5.9
+        color = '#F97316'; // Orange: 4.5 - 5.9
         radius = 9;
       } else if (mag >= 3.0) {
-        color = '#D97706'; // Amber: 3.0 - 4.4
+        color = '#F59E0B'; // Amber: 3.0 - 4.4
         radius = 7;
       }
 
@@ -141,7 +163,7 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
         radius: isSelected ? radius + 4 : radius,
         fillColor: color,
         fillOpacity: isSelected ? 0.95 : 0.75,
-        color: isSelected ? '#0F172A' : '#FFFFFF',
+        color: isSelected ? '#FFFFFF' : color,
         weight: isSelected ? 2.5 : 1,
       });
 
@@ -197,17 +219,17 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
         {/* Basemap Switcher & Actions */}
         <div className="flex items-center space-x-2.5">
           
-          {/* Layer Selector */}
+          {/* Layer Selector: Only Oscuro and Satelite */}
           <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-lg text-xs font-semibold">
             <button
-              onClick={() => switchBaseMap('light')}
+              onClick={() => switchBaseMap('dark')}
               className={`px-2.5 py-1 rounded-md transition-all ${
-                currentBaseMap === 'light'
+                currentBaseMap === 'dark'
                   ? 'bg-white text-blue-700 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Claro
+              Oscuro
             </button>
             <button
               onClick={() => switchBaseMap('satellite')}
@@ -237,13 +259,13 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
       <div
         ref={mapContainerRef}
         style={{ width: '100%', height: '100%', minHeight: '440px' }}
-        className="flex-1 z-10 bg-slate-50"
+        className="flex-1 z-10 bg-slate-950"
       />
 
       {/* Magnitude Legend Bar */}
       <div className="absolute top-16 left-4 z-20 hidden sm:flex items-center space-x-3 text-xs font-mono text-slate-700 bg-white/95 backdrop-blur-xs px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
         <span className="flex items-center space-x-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
           <span>&lt; 3.0</span>
         </span>
         <span className="flex items-center space-x-1.5">
@@ -255,7 +277,7 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
           <span>4.5 - 5.9</span>
         </span>
         <span className="flex items-center space-x-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-red-600"></span>
+          <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
           <span className="font-bold text-red-600">&ge; 6.0 Mw</span>
         </span>
       </div>
