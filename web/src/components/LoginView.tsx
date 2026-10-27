@@ -134,11 +134,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </div>
         </div>
 
-        {/* Security badge footer */}
-        <div className="mt-6 text-center text-xs text-slate-400 font-mono">
-          Autenticación JWT &bull; Capa Gold &bull; PostgreSQL 16
-        </div>
-
       </div>
     </div>
   );
