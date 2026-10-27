@@ -11,7 +11,7 @@ interface EarthquakeMapProps {
   loading?: boolean;
 }
 
-type BaseMapType = 'light' | 'dark' | 'satellite';
+type BaseMapType = 'light' | 'satellite';
 
 const BASEMAP_TILES: Record<BaseMapType, { url: string; attribution: string; subdomains?: string[] }> = {
   light: {
@@ -19,11 +19,6 @@ const BASEMAP_TILES: Record<BaseMapType, { url: string; attribution: string; sub
     url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
     attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
     subdomains: ['a', 'b', 'c', 'd'],
-  },
-  dark: {
-    // ESRI World Dark Gray Base
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-    attribution: '&copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
   },
   satellite: {
     // ESRI World Imagery
@@ -213,16 +208,6 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
               }`}
             >
               Claro
-            </button>
-            <button
-              onClick={() => switchBaseMap('dark')}
-              className={`px-2.5 py-1 rounded-md transition-all ${
-                currentBaseMap === 'dark'
-                  ? 'bg-white text-blue-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Oscuro
             </button>
             <button
               onClick={() => switchBaseMap('satellite')}
