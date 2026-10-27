@@ -59,14 +59,143 @@ const WELCOME_SUGGESTIONS: WelcomeSuggestion[] = [
   },
 ];
 
-// Sanitizer to eliminate any emojis from both static text and LLM responses
+// Sanitizer to eliminate any emojis, combining keycaps and variation selectors
 const removeEmojis = (text: string): string => {
   return text
+    // Strip combining enclosing keycap (e.g. keycap numbers) and variation selectors
+    .replace(/[\u20E3\uFE0E\uFE0F]/g, '')
+    // Strip unicode emojis, transport symbols, pictographs, flags
     .replace(
-      /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2702}-\u{27B0}\u{24C2}-\u{1F251}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2B00}-\u{2BFF}\u{200D}\u{FE0F}]/gu,
+      /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2702}-\u{27B0}\u{24C2}-\u{1F251}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2B00}-\u{2BFF}\u{200D}]/gu,
       ''
     )
     .trim();
+};
+
+type ParsedBlock =
+  | { type: 'h1' | 'h2' | 'h3'; text: string }
+  | { type: 'table'; headers: string[]; rows: string[][] }
+  | { type: 'blockquote'; text: string }
+  | { type: 'bullet'; text: string }
+  | { type: 'number'; num: string; text: string }
+  | { type: 'paragraph'; text: string };
+
+const isTableRow = (line: string): boolean => {
+  if (!line) return false;
+  const trimmed = line.trim();
+  return trimmed.includes('|') && trimmed.replace(/^\||\|$/g, '').split('|').length > 1;
+};
+
+const isSeparatorRow = (line: string): boolean => {
+  if (!line) return false;
+  const cells = line.trim().replace(/^\||\|$/g, '').split('|');
+  return cells.length > 1 && cells.every((c) => /^:?-+:?$/.test(c.trim()));
+};
+
+const splitTableRow = (rowStr: string): string[] => {
+  let s = rowStr.trim();
+  if (s.startsWith('|')) s = s.slice(1);
+  if (s.endsWith('|')) s = s.slice(0, -1);
+  return s.split('|').map((c) => c.trim());
+};
+
+const parseMarkdownBlocks = (rawText: string): ParsedBlock[] => {
+  const text = removeEmojis(rawText);
+  const lines = text.split('\n');
+  const blocks: ParsedBlock[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    let line = lines[i].trim();
+    if (!line) {
+      i++;
+      continue;
+    }
+
+    // 1. Table check (header followed by separator)
+    if (isTableRow(line) && i + 1 < lines.length && isSeparatorRow(lines[i + 1])) {
+      const headers = splitTableRow(line);
+      i += 2; // skip header and separator
+      const rows: string[][] = [];
+      while (i < lines.length && isTableRow(lines[i]) && !isSeparatorRow(lines[i])) {
+        rows.push(splitTableRow(lines[i]));
+        i++;
+      }
+      blocks.push({ type: 'table', headers, rows });
+      continue;
+    }
+
+    // 2. Blockquote
+    if (line.startsWith('>')) {
+      blocks.push({ type: 'blockquote', text: line.replace(/^>+\s*/, '') });
+      i++;
+      continue;
+    }
+
+    // 3. Headings
+    if (line.startsWith('### ')) {
+      blocks.push({ type: 'h3', text: line.replace('### ', '') });
+      i++;
+      continue;
+    }
+    if (line.startsWith('## ')) {
+      blocks.push({ type: 'h2', text: line.replace('## ', '') });
+      i++;
+      continue;
+    }
+    if (line.startsWith('# ')) {
+      blocks.push({ type: 'h1', text: line.replace('# ', '') });
+      i++;
+      continue;
+    }
+
+    // 4. Line wrapped entirely in bold: **Title**
+    if (line.startsWith('**') && (line.endsWith('**') || line.endsWith('**:'))) {
+      const title = line.replace(/^\*\*|\*\*[:]?$/g, '');
+      blocks.push({ type: 'h2', text: title });
+      i++;
+      continue;
+    }
+
+    // 5. Bullet list
+    if (line.startsWith('* ') || line.startsWith('- ')) {
+      blocks.push({ type: 'bullet', text: line.substring(2) });
+      i++;
+      continue;
+    }
+
+    // 6. Numbered list
+    const numMatch = line.match(/^(\d+)\.\s+(.*)/);
+    if (numMatch) {
+      blocks.push({ type: 'number', num: numMatch[1], text: numMatch[2] });
+      i++;
+      continue;
+    }
+
+    // 7. Check if line is a section heading followed by a table or bullet list
+    let nextNonEmpty = '';
+    for (let k = i + 1; k < lines.length; k++) {
+      if (lines[k].trim()) {
+        nextNonEmpty = lines[k].trim();
+        break;
+      }
+    }
+    if (
+      !line.endsWith('.') &&
+      line.length < 80 &&
+      (isTableRow(nextNonEmpty) || nextNonEmpty.startsWith('-') || nextNonEmpty.startsWith('*'))
+    ) {
+      blocks.push({ type: 'h2', text: line });
+      i++;
+      continue;
+    }
+
+    // 8. Default paragraph
+    blocks.push({ type: 'paragraph', text: line });
+    i++;
+  }
+
+  return blocks;
 };
 
 export const AIChatBotBubble: React.FC<AIChatBotBubbleProps> = ({ session }) => {
@@ -164,66 +293,17 @@ export const AIChatBotBubble: React.FC<AIChatBotBubbleProps> = ({ session }) => 
     setSuggestedQuestions([]);
   };
 
-  const renderFormattedContent = (content: string) => {
-    const cleanContent = removeEmojis(content);
-    return (
-      <div className="space-y-1.5 text-xs sm:text-[13px] leading-relaxed text-slate-800">
-        {cleanContent.split('\n').map((line, idx) => {
-          const trimmed = line.trim();
-          if (!trimmed) return <div key={idx} className="h-1" />;
-
-          if (trimmed.startsWith('### ')) {
-            return (
-              <h4 key={idx} className="text-xs sm:text-sm font-bold text-slate-900 mt-2.5 mb-1">
-                {trimmed.replace('### ', '')}
-              </h4>
-            );
-          }
-          if (trimmed.startsWith('## ')) {
-            return (
-              <h3 key={idx} className="text-sm sm:text-base font-bold text-slate-900 mt-3 mb-1 border-b border-slate-100 pb-1">
-                {trimmed.replace('## ', '')}
-              </h3>
-            );
-          }
-
-          if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
-            const listText = trimmed.substring(2);
-            return (
-              <div key={idx} className="flex items-start space-x-1.5 pl-1.5">
-                <span className="text-blue-600 mt-0.5">•</span>
-                <span>{renderInlineFormatting(listText)}</span>
-              </div>
-            );
-          }
-
-          const numMatch = trimmed.match(/^(\d+)\.\s+(.*)/);
-          if (numMatch) {
-            return (
-              <div key={idx} className="flex items-start space-x-1.5 pl-1.5">
-                <span className="font-mono text-xs font-bold text-blue-600 mt-0.5">{numMatch[1]}.</span>
-                <span>{renderInlineFormatting(numMatch[2])}</span>
-              </div>
-            );
-          }
-
-          return <p key={idx}>{renderInlineFormatting(trimmed)}</p>;
-        })}
-      </div>
-    );
-  };
-
   const renderInlineFormatting = (text: string) => {
     const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
     return parts.map((part, index) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
+      if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
         return (
           <strong key={index} className="font-semibold text-slate-900">
             {part.slice(2, -2)}
           </strong>
         );
       }
-      if (part.startsWith('`') && part.endsWith('`')) {
+      if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
         return (
           <code key={index} className="px-1.5 py-0.5 rounded bg-slate-100 text-blue-700 font-mono text-[11px] border border-slate-200">
             {part.slice(1, -1)}
@@ -232,6 +312,105 @@ export const AIChatBotBubble: React.FC<AIChatBotBubbleProps> = ({ session }) => 
       }
       return part;
     });
+  };
+
+  const renderFormattedContent = (content: string) => {
+    const blocks = parseMarkdownBlocks(content);
+
+    return (
+      <div className="space-y-2 text-xs sm:text-[13px] leading-relaxed text-slate-800">
+        {blocks.map((block, idx) => {
+          if (block.type === 'table') {
+            return (
+              <div key={idx} className="my-3 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-2xs">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-semibold font-mono text-[11px] uppercase tracking-wider">
+                    <tr>
+                      {block.headers.map((h, hIdx) => (
+                        <th key={hIdx} className="py-2.5 px-3.5 whitespace-nowrap">
+                          {renderInlineFormatting(h)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-800">
+                    {block.rows.map((row, rIdx) => (
+                      <tr key={rIdx} className="hover:bg-slate-50/70 transition-colors">
+                        {row.map((cell, cIdx) => (
+                          <td key={cIdx} className="py-2.5 px-3.5 whitespace-nowrap font-sans text-xs">
+                            {renderInlineFormatting(cell)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          }
+
+          if (block.type === 'h1') {
+            return (
+              <h2 key={idx} className="text-base sm:text-lg font-bold text-slate-900 mt-4 mb-2 pb-1 border-b border-slate-100">
+                {renderInlineFormatting(block.text)}
+              </h2>
+            );
+          }
+
+          if (block.type === 'h2') {
+            return (
+              <h3 key={idx} className="text-sm sm:text-base font-bold text-slate-900 mt-3.5 mb-1.5 pb-1 border-b border-slate-100">
+                {renderInlineFormatting(block.text)}
+              </h3>
+            );
+          }
+
+          if (block.type === 'h3') {
+            return (
+              <h4 key={idx} className="text-xs sm:text-sm font-bold text-slate-900 mt-2.5 mb-1">
+                {renderInlineFormatting(block.text)}
+              </h4>
+            );
+          }
+
+          if (block.type === 'blockquote') {
+            return (
+              <div key={idx} className="my-2.5 p-3 rounded-lg bg-blue-50/70 border-l-4 border-blue-600 text-xs text-slate-700 leading-relaxed">
+                <div className="font-medium">{renderInlineFormatting(block.text)}</div>
+              </div>
+            );
+          }
+
+          if (block.type === 'bullet') {
+            return (
+              <div key={idx} className="flex items-start space-x-2 pl-1 py-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0" />
+                <div className="text-xs sm:text-[13px] leading-relaxed text-slate-800 flex-1">
+                  {renderInlineFormatting(block.text)}
+                </div>
+              </div>
+            );
+          }
+
+          if (block.type === 'number') {
+            return (
+              <div key={idx} className="flex items-start space-x-2 pl-1 py-0.5">
+                <span className="font-mono text-xs font-bold text-blue-600 shrink-0 mt-0.5">{block.num}.</span>
+                <div className="text-xs sm:text-[13px] leading-relaxed text-slate-800 flex-1">
+                  {renderInlineFormatting(block.text)}
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <p key={idx} className="text-xs sm:text-[13px] leading-relaxed text-slate-800">
+              {renderInlineFormatting(block.text)}
+            </p>
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -417,7 +596,7 @@ export const AIChatBotBubble: React.FC<AIChatBotBubbleProps> = ({ session }) => 
                   )}
 
                   <div
-                    className={`max-w-[82%] rounded-2xl p-4 shadow-xs ${
+                    className={`max-w-[85%] rounded-2xl p-4 shadow-xs ${
                       msg.role === 'user'
                         ? 'bg-blue-600 text-white rounded-tr-none'
                         : 'bg-white border border-slate-200 rounded-tl-none text-slate-800'
