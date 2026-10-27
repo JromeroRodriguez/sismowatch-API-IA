@@ -1,7 +1,6 @@
 """Unit tests for USGS Earthquakes transformation functions."""
 
 from datetime import datetime, timezone
-import pytest
 from include.transformations import transform_geojson_feature, epoch_ms_to_datetime
 
 
