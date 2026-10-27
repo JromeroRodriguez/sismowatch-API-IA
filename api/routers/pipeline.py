@@ -1,11 +1,13 @@
 """Pipeline status and data quality metrics router."""
 
+from typing import List
 from fastapi import APIRouter, Depends
-from auth import require_viewer_or_admin
+from auth import require_viewer_or_admin, require_admin
 from database import fetch_all, fetch_one
-from schemas import PipelineStatusItem, PipelineSummary, QualityMetricItem, User
+from schemas import PipelineStatusItem, PipelineSummary, QualityMetricItem, QuarantineItem, User
 
 router = APIRouter(prefix="/api/pipeline", tags=["Estado del Pipeline y Calidad"])
+quality_router = APIRouter(prefix="/api/quality", tags=["Calidad de Datos y Cuarentena (Solo Admin)"])
 
 
 @router.get(
@@ -79,3 +81,42 @@ def get_pipeline_status(_: User = Depends(require_viewer_or_admin)):
             else None
         ),
     )
+
+
+@quality_router.get(
+    "/quarantine",
+    response_model=List[QuarantineItem],
+    summary="Registros rechazados por calidad en cuarentena (Solo Admin)",
+)
+@router.get(
+    "/quarantine",
+    response_model=List[QuarantineItem],
+    summary="Registros rechazados por calidad en cuarentena (Solo Admin)",
+)
+def get_quarantine_records(_: User = Depends(require_admin)):
+    """Retorna los registros que no superaron las reglas de calidad de Pandera
+
+    y fueron desviados a la tabla de cuarentena. Requiere rol 'admin'.
+    """
+    sql = """
+        SELECT id, place, mag, latitude, longitude, depth_km, rejection_reason, rejected_at, raw_payload
+        FROM gold.quality_quarantine
+        ORDER BY rejected_at DESC
+        LIMIT 100;
+    """
+    rows = fetch_all(sql)
+    return [
+        QuarantineItem(
+            id=r["id"],
+            place=r.get("place"),
+            mag=float(r["mag"]) if r.get("mag") is not None else None,
+            latitude=float(r["latitude"]) if r.get("latitude") is not None else None,
+            longitude=float(r["longitude"]) if r.get("longitude") is not None else None,
+            depth_km=float(r["depth_km"]) if r.get("depth_km") is not None else None,
+            rejection_reason=r["rejection_reason"],
+            rejected_at=r["rejected_at"],
+            raw_payload=r.get("raw_payload"),
+        )
+        for r in rows
+    ]
+

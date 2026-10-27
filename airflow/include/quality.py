@@ -87,8 +87,10 @@ def validate_earthquakes_dataset(
     df["is_valid"] = True
 
     # 1. Row-level checks:
+    quarantine_records = []
     for idx, row in df.iterrows():
         row_valid = True
+        row_failures = []
         row_id = row.get("id")
 
         # Check 1: Mandatory ID and place
@@ -96,7 +98,9 @@ def validate_earthquakes_dataset(
         if not row_id or not str(row.get("place", "")).strip():
             row_valid = False
             checks_rejected += 1
-            failures.append(f"Row {row_id}: Missing mandatory ID or place")
+            reason = f"Row {row_id}: Missing mandatory ID or place"
+            failures.append(reason)
+            row_failures.append(reason)
         else:
             checks_passed += 1
 
@@ -106,7 +110,9 @@ def validate_earthquakes_dataset(
         if lat is None or not (-90.0 <= float(lat) <= 90.0):
             row_valid = False
             checks_rejected += 1
-            failures.append(f"Row {row_id}: Latitude out of bounds ({lat})")
+            reason = f"Row {row_id}: Latitude out of bounds ({lat})"
+            failures.append(reason)
+            row_failures.append(reason)
         else:
             checks_passed += 1
 
@@ -116,7 +122,9 @@ def validate_earthquakes_dataset(
         if lon is None or not (-180.0 <= float(lon) <= 180.0):
             row_valid = False
             checks_rejected += 1
-            failures.append(f"Row {row_id}: Longitude out of bounds ({lon})")
+            reason = f"Row {row_id}: Longitude out of bounds ({lon})"
+            failures.append(reason)
+            row_failures.append(reason)
         else:
             checks_passed += 1
 
@@ -126,7 +134,9 @@ def validate_earthquakes_dataset(
         if mag is None or not (-3.0 <= float(mag) <= 10.0):
             row_valid = False
             checks_rejected += 1
-            failures.append(f"Row {row_id}: Magnitude out of plausible range ({mag})")
+            reason = f"Row {row_id}: Magnitude out of plausible range ({mag})"
+            failures.append(reason)
+            row_failures.append(reason)
         else:
             checks_passed += 1
 
@@ -136,7 +146,9 @@ def validate_earthquakes_dataset(
         if depth is None or not (-10.0 <= float(depth) <= 1000.0):
             row_valid = False
             checks_rejected += 1
-            failures.append(f"Row {row_id}: Depth out of plausible range ({depth})")
+            reason = f"Row {row_id}: Depth out of plausible range ({depth})"
+            failures.append(reason)
+            row_failures.append(reason)
         else:
             checks_passed += 1
 
@@ -146,13 +158,24 @@ def validate_earthquakes_dataset(
         if not isinstance(time_val, (datetime, pd.Timestamp)):
             row_valid = False
             checks_rejected += 1
-            failures.append(f"Row {row_id}: Invalid time format")
+            reason = f"Row {row_id}: Invalid time format"
+            failures.append(reason)
+            row_failures.append(reason)
         else:
             checks_passed += 1
 
-        # Discard invalid row from silver promotion
+        # Discard invalid row from silver promotion and queue for quarantine
         if not row_valid:
             df.at[idx, "is_valid"] = False
+            quarantine_records.append({
+                "id": str(row_id or f"invalid_{idx}")[:64],
+                "place": str(row.get("place") or "Desconocido")[:255],
+                "mag": float(row.get("mag")) if pd.notnull(row.get("mag")) else None,
+                "latitude": float(row.get("latitude")) if pd.notnull(row.get("latitude")) else None,
+                "longitude": float(row.get("longitude")) if pd.notnull(row.get("longitude")) else None,
+                "depth_km": float(row.get("depth_km")) if pd.notnull(row.get("depth_km")) else None,
+                "rejection_reason": "; ".join(row_failures),
+            })
 
     # Check 7: Batch-level ID uniqueness
     checks_evaluated += 1
@@ -216,16 +239,46 @@ def validate_earthquakes_dataset(
         "freshness_minutes": freshness_minutes,
         "status": status,
         "details": details,
+        "quarantine_records": quarantine_records,
     }
 
     return df, summary
 
 
-def record_quality_metrics(metrics: Dict[str, Any]) -> None:
-    """Saves the execution quality metrics into gold.quality_metrics.
+def record_quarantine_records(invalid_records: list) -> None:
+    """Inserts rejected records into gold.quality_quarantine.
 
     Uses role: sismo_transform.
     """
+    if not invalid_records:
+        return
+
+    query = """
+    INSERT INTO gold.quality_quarantine (
+        id, place, mag, latitude, longitude, depth_km, rejection_reason, rejected_at
+    ) VALUES (
+        %(id)s, %(place)s, %(mag)s, %(latitude)s, %(longitude)s, %(depth_km)s, %(rejection_reason)s, NOW()
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        rejection_reason = EXCLUDED.rejection_reason,
+        rejected_at = NOW();
+    """
+    with get_db_connection(role="transform") as conn:
+        with conn.cursor() as cur:
+            for item in invalid_records:
+                cur.execute(query, item)
+
+
+def record_quality_metrics(metrics: Dict[str, Any]) -> None:
+    """Saves the execution quality metrics into gold.quality_metrics
+
+    and persists any rejected records into gold.quality_quarantine.
+    Uses role: sismo_transform.
+    """
+    # Persist quarantine records if any
+    if metrics.get("quarantine_records"):
+        record_quarantine_records(metrics["quarantine_records"])
+
     query = """
     INSERT INTO gold.quality_metrics (
         run_id, dag_id, execution_timestamp, total_records,

@@ -107,6 +107,30 @@ def test_admin_can_access_admin_route(api_client, admin_token):
     assert resp.json().get("status") in ["success", "queued"]
 
 
+def test_quarantine_endpoint_security_and_rbac(api_client, admin_token, viewer_token):
+    """Test /api/quality/quarantine enforces RBAC:
+
+    - Admin receives 200 OK with list of rejected records
+    - Viewer receives 403 Forbidden
+    - Unauthenticated receives 401 Unauthorized
+    """
+    # 1. Admin access
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+    resp_admin = api_client.get("/api/quality/quarantine", headers=admin_headers)
+    assert resp_admin.status_code == 200, f"Admin quarantine failed: {resp_admin.text}"
+    items = resp_admin.json()
+    assert isinstance(items, list)
+
+    # 2. Viewer access rejected
+    viewer_headers = {"Authorization": f"Bearer {viewer_token}"}
+    resp_viewer = api_client.get("/api/quality/quarantine", headers=viewer_headers)
+    assert resp_viewer.status_code == 403, "Viewer should be forbidden from accessing quarantine"
+
+    # 3. Unauthenticated access rejected
+    resp_anon = api_client.get("/api/quality/quarantine")
+    assert resp_anon.status_code == 401, "Anonymous user should be unauthorized"
+
+
 def test_chatbot_endpoint_returns_ground_truth_answer(api_client, viewer_token):
     """Test POST /api/chat handles natural language questions using live gold metrics."""
     headers = {"Authorization": f"Bearer {viewer_token}"}

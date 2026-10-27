@@ -1,13 +1,28 @@
-import React from 'react';
-import { CheckCircle2, AlertTriangle, Database, ShieldCheck } from 'lucide-react';
-import { PipelineSummary } from '../types';
+import React, { useEffect, useState } from 'react';
+import { CheckCircle2, AlertTriangle, Database, ShieldCheck, AlertOctagon } from 'lucide-react';
+import { PipelineSummary, QuarantineItem } from '../types';
+import { fetchQuarantine } from '../api';
 
 interface PipelineModalProps {
   pipeline: PipelineSummary | null;
   loading: boolean;
+  userRole?: 'admin' | 'viewer';
 }
 
-export const PipelineModal: React.FC<PipelineModalProps> = ({ pipeline, loading }) => {
+export const PipelineModal: React.FC<PipelineModalProps> = ({ pipeline, loading, userRole = 'viewer' }) => {
+  const [quarantineList, setQuarantineList] = useState<QuarantineItem[]>([]);
+  const [quarantineLoading, setQuarantineLoading] = useState(false);
+
+  useEffect(() => {
+    if (userRole === 'admin') {
+      setQuarantineLoading(true);
+      fetchQuarantine()
+        .then(setQuarantineList)
+        .catch((err) => console.error('Error fetching quarantine:', err))
+        .finally(() => setQuarantineLoading(false));
+    }
+  }, [userRole]);
+
   if (loading || !pipeline) {
     return (
       <div className="py-20 text-center text-slate-500 text-xs animate-pulse font-mono" role="status">
@@ -109,9 +124,14 @@ export const PipelineModal: React.FC<PipelineModalProps> = ({ pipeline, loading 
               <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
                 <ShieldCheck className="w-5 h-5" />
               </div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                Evaluación de Calidad (Pandera Quality Gate)
-              </h3>
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                  Evaluación de Calidad (Pandera Quality Gate)
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5 font-sans">
+                  {userRole === 'admin' ? 'Vista detallada de auditoría para perfil Administrador.' : 'Resumen ejecutivo de calidad para perfil Viewer.'}
+                </p>
+              </div>
             </div>
             <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
               Puntaje: {quality.quality_score.toFixed(1)}% ({quality.status})
@@ -136,6 +156,71 @@ export const PipelineModal: React.FC<PipelineModalProps> = ({ pipeline, loading 
               <div className="text-2xl font-extrabold text-red-600 font-mono mt-1.5 tabular-nums">{quality.rules_rejected}</div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 4. Quarantine Records Section (Admin Only) */}
+      {userRole === 'admin' && (
+        <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-2 mb-4">
+            <div className="flex items-center space-x-2.5">
+              <div className="p-2 rounded-lg bg-red-50 text-red-600">
+                <AlertOctagon className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                  Registros en Cuarentena de Calidad (Solo Admin)
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5 font-sans">
+                  Eventos rechazados por violar contratos de datos de Pandera. Desviados a gold.quality_quarantine.
+                </p>
+              </div>
+            </div>
+            <span className="text-xs font-mono font-bold text-red-700 bg-red-50 px-3 py-1 rounded-full border border-red-200 self-start sm:self-auto">
+              {quarantineList.length} en Cuarentena
+            </span>
+          </div>
+
+          {quarantineLoading ? (
+            <div className="py-6 text-center text-slate-500 text-xs font-mono animate-pulse">
+              Cargando registros en cuarentena...
+            </div>
+          ) : quarantineList.length === 0 ? (
+            <div className="py-6 text-center text-xs text-slate-500 font-mono">
+              No hay eventos en cuarentena. Todos los lotes han cumplido las reglas de calidad.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500 uppercase text-[10px]">
+                    <th className="py-2.5 px-3">ID Evento</th>
+                    <th className="py-2.5 px-3">Ubicación</th>
+                    <th className="py-2.5 px-3">Mag</th>
+                    <th className="py-2.5 px-3">Prof (km)</th>
+                    <th className="py-2.5 px-3">Motivo de Rechazo</th>
+                    <th className="py-2.5 px-3">Fecha Rechazo</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {quarantineList.map((q) => (
+                    <tr key={q.id} className="hover:bg-slate-50/70 transition">
+                      <td className="py-2.5 px-3 font-semibold text-slate-900">{q.id}</td>
+                      <td className="py-2.5 px-3 text-slate-700">{q.place || 'N/A'}</td>
+                      <td className="py-2.5 px-3 text-red-600 font-bold">{q.mag !== null ? q.mag : '-'}</td>
+                      <td className="py-2.5 px-3 text-slate-600">{q.depth_km !== null ? q.depth_km : '-'}</td>
+                      <td className="py-2.5 px-3 text-red-700 font-medium max-w-xs truncate" title={q.rejection_reason}>
+                        {q.rejection_reason}
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">
+                        {new Date(q.rejected_at).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

@@ -334,7 +334,7 @@ export const App: React.FC = () => {
         {/* TAB 3: PIPELINE & CALIDAD */}
         {activeTab === 'pipeline' && (
           <div className="space-y-6">
-            <PipelineModal pipeline={pipeline} loading={loading} />
+            <PipelineModal pipeline={pipeline} loading={loading} userRole={session.role} />
           </div>
         )}
 

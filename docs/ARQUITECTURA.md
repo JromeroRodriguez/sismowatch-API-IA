@@ -177,6 +177,152 @@ SismoWatch implementa una postura de seguridad en profundidad (*Defense in Depth
 Todos los esquemas y tablas de la plataforma están catalogados en OpenMetadata bajo el servicio `sismowatch_postgres`:
 * **Esquema `bronze`:** `earthquakes_raw` (catálogo del payload GeoJSON original y trazabilidad de ingestión).
 * **Esquema `silver`:** `earthquakes_clean` (catálogo de columnas tipadas y bandera `is_valid`).
-* **Esquema `gold`:** `earthquakes`, `quality_metrics`, `pipeline_status`, `ai_reports`, `ai_anomalies`.
+* **Esquema `gold`:** `earthquakes`, `quality_metrics`, `quality_quarantine`, `pipeline_status`, `ai_reports`, `ai_anomalies`.
 
 El linaje de datos evidencia que la tabla `gold.earthquakes` proviene de transformaciones y filtrado de calidad desde `silver.earthquakes_clean`, la cual a su vez deriva de `bronze.earthquakes_raw`, asegurando cumplimiento normativo y transparencia total en la trazabilidad del dato.
+
+---
+
+## 7. Modelo de Datos Documentado (Tablas, Llaves y Relaciones)
+
+El almacenamiento en PostgreSQL 16 estructura los datos en 3 esquemas bien diferenciados que modelan el ciclo de vida del dato sísmico:
+
+```mermaid
+erDiagram
+    BRONZE_EARTHQUAKES_RAW {
+        varchar id PK "ID oficial USGS (ej: us7000abcd)"
+        jsonb raw_payload "Payload GeoJSON crudo e inmutable"
+        timestamptz ingested_at "Timestamp de inserción en el lago"
+        varchar source "Origen del dato ('usgs_feed' o 'usgs_historical')"
+    }
+
+    SILVER_EARTHQUAKES_CLEAN {
+        varchar id PK "ID oficial USGS"
+        numeric mag "Magnitud tipada (-3.0 a 10.0)"
+        varchar place "Ubicación geográfica descriptiva"
+        timestamptz time "Fecha del sismo convertida de epoch ms a UTC"
+        timestamptz updated "Fecha de actualización USGS en UTC"
+        numeric longitude "Coordenada X (-180.0 a 180.0)"
+        numeric latitude "Coordenada Y (-90.0 a 90.0)"
+        numeric depth_km "Profundidad en kilómetros (-10.0 a 1000.0)"
+        integer tsunami "Bandera de alerta marina (0 o 1)"
+        integer sig "Significancia del evento sísmico"
+        varchar status "Estado USGS ('reviewed' o 'automatic')"
+        varchar mag_type "Tipo de cálculo de magnitud (ml, mb, mw, md)"
+        boolean is_valid "Resultado del Quality Gate Pandera"
+        timestamptz cleaned_at "Timestamp de limpieza y tipado"
+    }
+
+    GOLD_EARTHQUAKES {
+        varchar id PK "ID oficial del sismo verificado"
+        numeric mag "Magnitud analítica garantizada"
+        varchar place "Ubicación normalizada"
+        timestamptz time "Momento del evento en UTC"
+        numeric longitude "Longitud normalizada"
+        numeric latitude "Latitud normalizada"
+        numeric depth_km "Profundidad analítica"
+        integer tsunami "Indicador de alerta"
+        integer sig "Significancia analítica"
+        varchar status "Estado del sismo"
+        timestamptz curated_at "Timestamp de publicación analítica"
+    }
+
+    GOLD_QUALITY_METRICS {
+        varchar run_id PK "Identificador único de ejecución del DAG"
+        varchar dag_id "DAG ejecutor (ej: earthquakes_processing_dag)"
+        timestamptz execution_timestamp "Fecha y hora de la corrida"
+        integer total_records "Volumen evaluado en el micro-lote"
+        integer rules_evaluated "Conteo total de reglas Pandera"
+        integer rules_passed "Reglas exitosas"
+        integer rules_rejected "Reglas fallidas"
+        numeric quality_score "Porcentaje de calidad (0 a 100%)"
+        numeric freshness_minutes "Retraso del dato más reciente vs reloj"
+        varchar status "Resultado ('PASSED' o 'FAILED')"
+        jsonb details "Métricas complementarias y muestreo de fallas"
+    }
+
+    GOLD_QUALITY_QUARANTINE {
+        varchar id PK "ID del evento rechazado"
+        varchar place "Ubicación original reportada"
+        numeric mag "Magnitud que violó regla (o nulo)"
+        numeric latitude "Latitud anómala"
+        numeric longitude "Longitud anómala"
+        numeric depth_km "Profundidad anómala"
+        text rejection_reason "Motivo exacto del rechazo por Pandera"
+        timestamptz rejected_at "Fecha en que fue desviado a cuarentena"
+        jsonb raw_payload "Payload del evento rechazado"
+    }
+
+    GOLD_AI_REPORTS {
+        integer id PK "Identificador autonumérico"
+        date report_date UK "Fecha de cobertura analítica"
+        text summary_narrative "Narrativa ejecutiva generada por LLM o fallback"
+        integer total_events "Cifra exacta calculada por SQL"
+        numeric max_magnitude "Magnitud máxima verificada"
+        numeric avg_magnitude "Promedio de magnitud en 24h"
+        integer tsunami_events "Conteo de alertas de tsunami"
+        varchar most_active_region "Zona con mayor recurrencia sísmica"
+        varchar model_used "Modelo LLM (ej: openai/gpt-oss-120b)"
+        integer tokens_used "Tokens totales procesados"
+        integer latency_ms "Latencia de inferencia en milisegundos"
+        numeric cost_estimate_usd "Costo financiero estimado"
+        timestamptz generated_at "Timestamp de creación"
+    }
+
+    GOLD_AI_ANOMALIES {
+        integer id PK "Identificador autonumérico"
+        varchar event_id FK "Referencia a gold.earthquakes(id)"
+        timestamptz detection_date "Momento de detección de la anomalía"
+        varchar technique "Técnica aplicada ('Z-Score Robust Anomaly')"
+        varchar place "Ubicación del evento atípico"
+        numeric magnitude "Magnitud del evento atípico"
+        numeric depth_km "Profundidad del evento"
+        numeric anomaly_score "Puntaje Z calculado (z >= 2.0)"
+        text explanation "Explicación analítica y contexto sismológico"
+    }
+
+    GOLD_PIPELINE_STATUS {
+        varchar dag_id PK "Nombre del DAG monitoreado"
+        varchar last_run_id "Último run ID de Airflow"
+        varchar state "Estado actual ('SUCCESS', 'FAILED')"
+        timestamptz last_success_at "Última ejecución exitosa"
+        timestamptz last_failure_at "Última falla registrada"
+        timestamptz updated_at "Timestamp de actualización de telemetría"
+    }
+
+    BRONZE_EARTHQUAKES_RAW ||--o| SILVER_EARTHQUAKES_CLEAN : "Transforma y tipa"
+    SILVER_EARTHQUAKES_CLEAN ||--o| GOLD_EARTHQUAKES : "Promueve si is_valid=TRUE"
+    SILVER_EARTHQUAKES_CLEAN ||--o| GOLD_QUALITY_QUARANTINE : "Desvía si is_valid=FALSE"
+    GOLD_EARTHQUAKES ||--o{ GOLD_AI_ANOMALIES : "Genera anomalía (Z-Score)"
+```
+
+---
+
+## 8. Decisiones y Qué Harías Diferente en Producción
+
+Aunque el diseño actual cumple con rigor todos los estándares requeridos en entornos de evaluación y microservicios locales, en un despliegue productivo de escala global se implementarían las siguientes mejoras arquitectónicas:
+
+1. **Orquestación Distribuida con Alta Disponibilidad:**
+   - *Actual:* Airflow con `LocalExecutor` sobre un único nodo Docker.
+   - *En Producción:* Migración a **Airflow sobre Kubernetes (KubernetesExecutor / Astro / Cloud Composer)** con auto-escalado dinámico de pods de workers, separando el planificador (scheduler) en alta disponibilidad activa-activa.
+2. **Data Lakehouse en Almacenamiento de Objetos:**
+   - *Actual:* Capa Bronze almacenada como JSONB en PostgreSQL.
+   - *En Producción:* Almacenar la capa Bronze cruda inmutable en **AWS S3 / Google Cloud Storage** utilizando formatos abiertos de tabla como **Apache Iceberg** o **Delta Lake**, manteniendo PostgreSQL o Snowflake exclusivamente para las capas Silver y Gold, reduciendo costos de almacenamiento en un 80%.
+3. **Ingesta Streaming en Tiempo Real (Sub-Segundo):**
+   - *Actual:* Polling cada 5 minutos mediante DAG programado.
+   - *En Producción:* Implementar una arquitectura **Event-Driven con Apache Kafka / Redpanda** y Change Data Capture (**Debezium**) o webhooks de USGS para recibir los sismos al instante en que son publicados, procesando la validación en micro-streaming con Apache Flink o Spark Streaming.
+4. **Gestión Empresarial de Secretos y Cifrado:**
+   - *Actual:* Secretos inyectados mediante `.env` seguro no versionado.
+   - *En Producción:* Integración nativa con **HashiCorp Vault, AWS Secrets Manager o GCP Secret Manager**, con rotación automática de llaves Fernet, rotación de JWT cada 24 horas y cifrado en reposo mediante llaves gestionadas por el cliente (KMS).
+5. **Base de Datos Administrada con Réplicas de Lectura:**
+   - *Actual:* PostgreSQL 16 monolítico en contenedor.
+   - *En Producción:* **AWS Aurora PostgreSQL Multi-AZ** con réplicas de lectura (`Read Replicas`) distribuidas geográficamente para descargar a la API de FastAPI y evitar contención con los workers de Airflow.
+6. **Arquitectura Multi-Proveedor para IA y Cache Semántico:**
+   - *Actual:* Groq con `openai/gpt-oss-120b` y fallback estático determinista.
+   - *En Producción:* Implementar un enrutador inteligente de LLMs (**LiteLLM / OpenRouter**) con fallback escalonado (Groq -> Anthropic Claude 3.5 -> OpenAI GPT-4o -> Modelo local vLLM en GPU privada), complementado con **cache semántico de consultas** con Redis y Pgvector para responder preguntas frecuentes sin consumir tokens externos.
+7. **Pipeline de Integración y Entrega Continua (CI/CD):**
+   - *En Producción:* Automatización con GitHub Actions que ejecute en cada Pull Request:
+     - Escaneo de secretos en git con **Gitleaks**.
+     - Análisis estático de vulnerabilidades con **Bandit** y auditoría de paquetes con **pip-audit**.
+     - Ejecución de los 17 tests automatizados en un contenedor efímero.
+     - Pruebas de regresión visual para el frontend con Playwright.

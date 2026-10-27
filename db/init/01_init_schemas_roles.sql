@@ -119,7 +119,7 @@ CREATE INDEX IF NOT EXISTS idx_gold_time ON gold.earthquakes(time DESC);
 CREATE INDEX IF NOT EXISTS idx_gold_mag ON gold.earthquakes(mag);
 CREATE INDEX IF NOT EXISTS idx_gold_tsunami ON gold.earthquakes(tsunami);
 
--- Quality metrics table (tracks quality runs without quarantine)
+-- Quality metrics table
 CREATE TABLE IF NOT EXISTS gold.quality_metrics (
     run_id VARCHAR(128) PRIMARY KEY,
     dag_id VARCHAR(64) NOT NULL,
@@ -135,6 +135,21 @@ CREATE TABLE IF NOT EXISTS gold.quality_metrics (
 );
 
 CREATE INDEX IF NOT EXISTS idx_quality_timestamp ON gold.quality_metrics(execution_timestamp DESC);
+
+-- Quality quarantine table (records rejected by quality gate)
+CREATE TABLE IF NOT EXISTS gold.quality_quarantine (
+    id VARCHAR(64) PRIMARY KEY,
+    place VARCHAR(255),
+    mag NUMERIC(4,2),
+    latitude NUMERIC(9,6),
+    longitude NUMERIC(9,6),
+    depth_km NUMERIC(7,2),
+    rejection_reason TEXT NOT NULL,
+    rejected_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    raw_payload JSONB
+);
+
+CREATE INDEX IF NOT EXISTS idx_quarantine_rejected_at ON gold.quality_quarantine(rejected_at DESC);
 
 -- AI Reports narrative table
 CREATE TABLE IF NOT EXISTS gold.ai_reports (

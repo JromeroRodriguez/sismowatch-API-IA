@@ -6,6 +6,7 @@ import {
   UserSession,
   ReportItem,
   AnomalyItem,
+  QuarantineItem,
 } from './types';
 
 const API_BASE = ''; // uses Vite proxy
@@ -129,6 +130,19 @@ export async function fetchAnomalies(): Promise<AnomalyItem[]> {
     window.location.reload();
   }
   if (!resp.ok) throw new Error('Error al cargar anomalías');
+  return resp.json();
+}
+
+export async function fetchQuarantine(): Promise<QuarantineItem[]> {
+  const resp = await fetch(`${API_BASE}/api/quality/quarantine`, { headers: getAuthHeaders() });
+  if (resp.status === 401) {
+    clearSession();
+    window.location.reload();
+  }
+  if (resp.status === 403) {
+    throw new Error('Permiso denegado: solo administradores pueden ver registros en cuarentena');
+  }
+  if (!resp.ok) throw new Error('Error al cargar registros en cuarentena');
   return resp.json();
 }
 

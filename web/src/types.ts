@@ -65,6 +65,17 @@ export interface QualityMetricItem {
   details?: Record<string, any>;
 }
 
+export interface QuarantineItem {
+  id: string;
+  place?: string;
+  mag?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  depth_km?: number | null;
+  rejection_reason: string;
+  rejected_at: string;
+}
+
 export interface PipelineSummary {
   statuses: PipelineStatusItem[];
   latest_quality: QualityMetricItem | null;

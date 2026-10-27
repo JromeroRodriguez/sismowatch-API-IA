@@ -93,6 +93,18 @@ class QualityMetricItem(BaseModel):
     details: Optional[Dict[str, Any]] = None
 
 
+class QuarantineItem(BaseModel):
+    id: str
+    place: Optional[str] = None
+    mag: Optional[float] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    depth_km: Optional[float] = None
+    rejection_reason: str
+    rejected_at: datetime
+    raw_payload: Optional[Dict[str, Any]] = None
+
+
 class PipelineSummary(BaseModel):
     statuses: List[PipelineStatusItem]
     latest_quality: Optional[QualityMetricItem] = None

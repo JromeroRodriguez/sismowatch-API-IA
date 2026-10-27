@@ -3,7 +3,7 @@
 set -e
 
 echo "=========================================================="
-echo " Running SismoWatch Automated Test Suite (16 Test Cases)"
+echo " Running SismoWatch Automated Test Suite (17 Test Cases)"
 echo " Covering: Ingestion, Transformations, DAG Integrity, "
 echo " Pandera Quality Rules, API/RBAC Security Gates, and"
 echo " Live Ground-Truth Conversational SismoBot Chat"

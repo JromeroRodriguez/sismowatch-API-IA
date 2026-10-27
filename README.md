@@ -92,14 +92,17 @@ python3 openmetadata/run_ingestion.py
 
 | Módulo / Acción | Rol `viewer` | Rol `admin` |
 | :--- | :---: | :---: |
-| Iniciar sesión y obtener JWT | ✅ | ✅ |
+| Iniciar sesión y obtener JWT (`/auth/login`) | ✅ | ✅ |
 | Consultar KPIs y Estadísticas (`/api/kpis`) | ✅ | ✅ |
 | Visualizar Mapa y Listado de Sismos (`/api/events`) | ✅ | ✅ |
 | Consultar Series de Tiempo (`/api/stats/timeseries`) | ✅ | ✅ |
 | Conectarse al stream en vivo SSE (`/api/stream`) | ✅ | ✅ |
 | Descargar Reportes CSV y PDF (`/api/reports/export`) | ✅ | ✅ |
-| Leer Reporte Ejecutivo de IA y Anomalías | ✅ | ✅ |
+| Leer Reporte Ejecutivo de IA y Anomalías (`/api/reports`) | ✅ | ✅ |
+| Ver Estado del Pipeline y Calidad (`/api/pipeline/status`) | ✅ *(Resumen)* | ✅ *(Detalle)* |
 | **Interactuar con SismoBot Chatbot (`/api/chat`)** | ✅ | ✅ |
+| **Consultar Registros en Cuarentena (`/api/quality/quarantine`)** | ❌ *(HTTP 403 Forbidden)* | ✅ *(HTTP 200 OK)* |
+| **Regenerar Reporte IA (`/api/admin/reports/regenerate`)** | ❌ *(HTTP 403 Forbidden)* | ✅ *(HTTP 200/201 Queued)* |
 | **Disparar Backfill Histórico en Airflow (`/api/admin/backfill`)** | ❌ *(HTTP 403 Forbidden)* | ✅ *(HTTP 200/201 Queued)* |
 
 ---
@@ -148,7 +151,7 @@ Se incluye una suite completa de pruebas unitarias, de integración y de segurid
 ./run_tests.sh
 ```
 
-### Cobertura de las 16 Pruebas:
+### Cobertura de las 17 Pruebas:
 1. **Transformaciones (`airflow/tests/test_transformations.py`):**
    - Conversión precisa de timestamps Epoch en milisegundos a objetos `datetime` UTC.
    - Normalización de GeoJSON anidado a columnas atómicas planas con manejo de geometrías nulas.
@@ -167,6 +170,7 @@ Se incluye una suite completa de pruebas unitarias, de integración y de segurid
    - Acceso exitoso del rol `viewer` a endpoints de lectura (`/api/kpis`, `/api/events`, etc.).
    - **Prueba Crítica de Seguridad RBAC:** Rechazo con **HTTP 403 Forbidden** cuando un usuario `viewer` intenta invocar la ruta administrativa `/api/admin/backfill`.
    - Ejecución exitosa de la ruta de backfill para el rol `admin`.
+   - **Prueba de Cuarentena y RBAC:** Verificación de `GET /api/quality/quarantine` otorgando 200 a `admin`, 403 a `viewer` y 401 a usuarios anónimos.
    - **Prueba del Chatbot Sísmico:** Validación de `POST /api/chat` respondiendo consultas en lenguaje natural con métricas vivas de Gold.
 
 ---
@@ -308,3 +312,40 @@ Para documentar la entrega del proyecto, se sugiere capturar las siguientes evid
 ├── .env.example                           # Plantilla de variables de entorno
 └── README.md                              # Guía del proyecto y entrega
 ```
+
+---
+
+## 11. Funcionamiento del Tiempo Real (Server-Sent Events) y Justificación
+
+### 11.1 Arquitectura del Flujo en Tiempo Real
+SismoWatch implementa un canal de transmisión continua de eventos sísmicos basado en **Server-Sent Events (SSE)** mediante el endpoint `GET /api/stream`:
+
+1. **Conexión Reactiva:** Al iniciar sesión, la interfaz web en React abre una conexión persistente `EventSource` contra `/api/stream`.
+2. **Generador Asíncrono en FastAPI:** El backend evalúa la capa Gold (`gold.earthquakes`) con latencia menor a 1 segundo. Cuando nuevos eventos son promovidos desde el pipeline, el servidor los serializa en formato estándar `text/event-stream` (`data: {...}\n\n`).
+3. **Actualización Sin Recarga:** El cliente React recibe el payload, actualiza el estado local de sismos, renderiza el nuevo punto en el mapa interactivo de Leaflet, actualiza los contadores de los KPIs y refresca el timestamp del badge **"EN VIVO"**.
+4. **Resiliencia y Reconexión Automática:** Si la red experimenta microcortes o el backend reinicia, el estándar SSE reconecta automáticamente de forma exponencial sin intervención del usuario.
+
+### 11.2 Justificación Técnica: Por qué SSE sobre WebSocket y Polling
+
+| Criterio | Server-Sent Events (SSE) - Elegido | WebSockets | Polling Corto |
+| :--- | :--- | :--- | :--- |
+| **Direccionalidad** | **Unidireccional (Server -> Client):** Se adapta exactamente a la naturaleza del monitoreo sísmico (el backend notifica eventos). | Bidireccional: Innecesario ya que el cliente solo envía comandos HTTP estándar (filtros, login). | Bidireccional simulado con requests repetitivos. |
+| **Sobrecarga de Red y CPU** | **Mínima:** Una sola conexión HTTP/1.1 o HTTP/2 abierta. Cero overhead de handshakes continuos. | Baja, pero requiere mantener sockets TCP activos y heartbeat ping/pong manual. | **Muy alta:** Miles de peticiones HTTP vacías que saturan FastAPI y la base de datos. |
+| **Compatibilidad con Proxies / Nginx** | **Nativa:** Funciona sobre HTTP estándar sin requerir módulos de upgrade de protocolo en Nginx o balanceadores. | Compleja: Requiere configurar `Upgrade: websocket` y `Connection: Upgrade` en reverse proxies. | Nativa pero ineficiente. |
+| **Reconexión Automática** | **Nativa del navegador:** `EventSource` gestiona reconexión automática y `Last-Event-ID` sin código adicional. | Manual: Requiere librerías pesadas (ej. Socket.io) o lógica manual de reconexión con backoff. | No aplica (reintenta cada N segundos). |
+
+---
+
+## 12. Limitaciones Conocidas y Mejoras Futuras
+
+En caso de disponer de mayor tiempo de desarrollo o escalar a un entorno enterprise internacional, se recomiendan las siguientes mejoras:
+
+1. **Particionamiento Temporal en PostgreSQL:**
+   - *Limitación actual:* La tabla `gold.earthquakes` es monolítica.
+   - *Mejora futura:* Aplicar particionamiento nativo declarativo por rangos mensuales (`PARTITION BY RANGE (time)`), acelerando las consultas analíticas sobre décadas de historial sísmico.
+2. **Alertamiento Push Proactivo:**
+   - *Mejora futura:* Incorporar notificaciones Web Push en el navegador y bots de Telegram / Slack que disparen alertas automáticas ante sismos de magnitud crítica ($M \ge 6.0$) o eventos con bandera de tsunami activa.
+3. **Caché Distribuido con Redis:**
+   - *Mejora futura:* Incorporar un nodo de Redis para cachear las respuestas de `/api/kpis` y `/api/stats/timeseries` con TTL de 30 segundos, reduciendo la carga de lectura en PostgreSQL durante picos de concurrencia.
+4. **Transición a Streaming Nativo con Apache Kafka:**
+   - *Mejora futura:* Reemplazar la ingesta de micro-lotes de 5 minutos por un conector Debezium / Kafka Connect para procesar eventos con latencias sub-segundo en Apache Flink.

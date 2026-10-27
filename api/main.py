@@ -41,6 +41,7 @@ app.include_router(earthquakes.router)
 app.include_router(reports.router)
 app.include_router(chat.router)
 app.include_router(pipeline.router)
+app.include_router(pipeline.quality_router)
 app.include_router(stream.router)
 app.include_router(admin.router)
 
