@@ -19,6 +19,7 @@ export const App: React.FC = () => {
   // Dashboard Data State
   const [kpis, setKpis] = useState<KPIsResponse | null>(null);
   const [events, setEvents] = useState<Earthquake[]>([]);
+  const [mapEvents, setMapEvents] = useState<Earthquake[]>([]);
   const [totalEvents, setTotalEvents] = useState<number>(0);
   const [timeSeries, setTimeSeries] = useState<TimeSeriesPoint[]>([]);
   const [pipeline, setPipeline] = useState<PipelineSummary | null>(null);
@@ -52,13 +53,17 @@ export const App: React.FC = () => {
     setError(null);
 
     try {
-      const [kpiRes, eventsRes, tsRes, pipeRes, repRes, anomRes] = await Promise.all([
+      const [kpiRes, eventsRes, mapRes, tsRes, pipeRes, repRes, anomRes] = await Promise.all([
         fetchKPIs(),
         fetchEvents({
           page: currentPage,
           pageSize,
           minMag: minMagFilter,
           search: searchQuery,
+        }),
+        fetchEvents({
+          page: 1,
+          pageSize: 100,
         }),
         fetchTimeSeries(7, 'hour'),
         fetchPipelineStatus(),
@@ -68,6 +73,7 @@ export const App: React.FC = () => {
 
       setKpis(kpiRes);
       setEvents(eventsRes.items);
+      setMapEvents(mapRes.items);
       setTotalEvents(eventsRes.total);
       setTimeSeries(tsRes);
       setPipeline(pipeRes);
@@ -118,6 +124,11 @@ export const App: React.FC = () => {
               setEvents((prev) => {
                 if (prev.some((item) => item.id === newEv.id)) return prev;
                 return [newEv, ...prev];
+              });
+
+              setMapEvents((prev) => {
+                if (prev.some((item) => item.id === newEv.id)) return prev;
+                return [newEv, ...prev.slice(0, 99)];
               });
 
               // Increment KPI count
@@ -248,9 +259,10 @@ export const App: React.FC = () => {
             {/* Map & Timeline Grid */}
             <div className="grid grid-cols-1 gap-6">
               <EarthquakeMap
-                events={events}
+                events={mapEvents.length > 0 ? mapEvents : events}
                 selectedEvent={selectedEvent}
                 onSelectEvent={(ev) => setSelectedEvent(ev)}
+                loading={loading}
               />
             </div>
 
