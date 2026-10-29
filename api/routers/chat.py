@@ -36,67 +36,77 @@ def sanitize_message(text: str) -> str:
 
 
 def get_live_seismic_context() -> Dict[str, Any]:
-    """Retrieves real-time ground-truth facts from PostgreSQL gold schema."""
-    # 1. 24h & general KPIs
-    kpi_query = """
-        SELECT
-            COUNT(*) AS total_24h,
-            COALESCE(MAX(mag), 0.0) AS max_mag_24h,
-            ROUND(COALESCE(AVG(mag), 0.0)::numeric, 2) AS avg_mag_24h,
-            COALESCE(SUM(CASE WHEN tsunami = 1 THEN 1 ELSE 0 END), 0) AS tsunami_alerts_24h,
-            (SELECT place FROM gold.earthquakes WHERE time >= NOW() - INTERVAL '24 hours' ORDER BY mag DESC LIMIT 1) AS strongest_place_24h
-        FROM gold.earthquakes
-        WHERE time >= NOW() - INTERVAL '24 hours';
-    """
-    kpis = fetch_one(kpi_query) or {}
+    """Retrieves real-time ground-truth facts from PostgreSQL gold schema with fail-safe error handling."""
+    try:
+        # 1. 24h & general KPIs
+        kpi_query = """
+            SELECT
+                COUNT(*) AS total_24h,
+                COALESCE(MAX(mag), 0.0) AS max_mag_24h,
+                ROUND(COALESCE(AVG(mag), 0.0)::numeric, 2) AS avg_mag_24h,
+                COALESCE(SUM(CASE WHEN tsunami = 1 THEN 1 ELSE 0 END), 0) AS tsunami_alerts_24h,
+                (SELECT place FROM gold.earthquakes WHERE time >= NOW() - INTERVAL '24 hours' ORDER BY mag DESC LIMIT 1) AS strongest_place_24h
+            FROM gold.earthquakes
+            WHERE time >= NOW() - INTERVAL '24 hours';
+        """
+        kpis = fetch_one(kpi_query) or {}
 
-    # 2. Top 5 places with HIGHEST activity in the last 7 days
-    top_query = """
-        SELECT place, COUNT(*) AS count, MAX(mag) AS max_mag, ROUND(AVG(mag)::numeric, 2) AS avg_mag
-        FROM gold.earthquakes
-        WHERE time >= NOW() - INTERVAL '7 days' AND place IS NOT NULL
-        GROUP BY place
-        ORDER BY count DESC
-        LIMIT 5;
-    """
-    top_places = fetch_all(top_query)
+        # 2. Top 5 places with HIGHEST activity in the last 7 days
+        top_query = """
+            SELECT place, COUNT(*) AS count, MAX(mag) AS max_mag, ROUND(AVG(mag)::numeric, 2) AS avg_mag
+            FROM gold.earthquakes
+            WHERE time >= NOW() - INTERVAL '7 days' AND place IS NOT NULL
+            GROUP BY place
+            ORDER BY count DESC
+            LIMIT 5;
+        """
+        top_places = fetch_all(top_query)
 
-    # 3. Places with LOWEST activity / single isolated events in last 7 days
-    lowest_query = """
-        SELECT place, COUNT(*) AS count, MIN(mag) AS min_mag, MAX(mag) AS max_mag
-        FROM gold.earthquakes
-        WHERE time >= NOW() - INTERVAL '7 days' AND place IS NOT NULL
-        GROUP BY place
-        ORDER BY count ASC, max_mag ASC
-        LIMIT 5;
-    """
-    lowest_places = fetch_all(lowest_query)
+        # 3. Places with LOWEST activity / single isolated events in last 7 days
+        lowest_query = """
+            SELECT place, COUNT(*) AS count, MIN(mag) AS min_mag, MAX(mag) AS max_mag
+            FROM gold.earthquakes
+            WHERE time >= NOW() - INTERVAL '7 days' AND place IS NOT NULL
+            GROUP BY place
+            ORDER BY count ASC, max_mag ASC
+            LIMIT 5;
+        """
+        lowest_places = fetch_all(lowest_query)
 
-    # 4. Recent statistical anomalies from gold.ai_anomalies
-    anomalies_query = """
-        SELECT place, magnitude, depth_km, anomaly_score, explanation
-        FROM gold.ai_anomalies
-        ORDER BY detection_date DESC
-        LIMIT 4;
-    """
-    anomalies = fetch_all(anomalies_query)
+        # 4. Recent statistical anomalies from gold.ai_anomalies
+        anomalies_query = """
+            SELECT place, magnitude, depth_km, anomaly_score, explanation
+            FROM gold.ai_anomalies
+            ORDER BY detection_date DESC
+            LIMIT 4;
+        """
+        anomalies = fetch_all(anomalies_query)
 
-    # 5. Top 3 strongest recent earthquakes
-    strongest_query = """
-        SELECT place, mag, depth_km, TO_CHAR(time, 'YYYY-MM-DD HH24:MI UTC') AS event_time
-        FROM gold.earthquakes
-        ORDER BY mag DESC, time DESC
-        LIMIT 3;
-    """
-    strongest_events = fetch_all(strongest_query)
+        # 5. Top 3 strongest recent earthquakes
+        strongest_query = """
+            SELECT place, mag, depth_km, TO_CHAR(time, 'YYYY-MM-DD HH24:MI UTC') AS event_time
+            FROM gold.earthquakes
+            ORDER BY mag DESC, time DESC
+            LIMIT 3;
+        """
+        strongest_events = fetch_all(strongest_query)
 
-    return {
-        "kpis": kpis,
-        "top_places": top_places,
-        "lowest_places": lowest_places,
-        "anomalies": anomalies,
-        "strongest_events": strongest_events,
-    }
+        return {
+            "kpis": kpis,
+            "top_places": top_places,
+            "lowest_places": lowest_places,
+            "anomalies": anomalies,
+            "strongest_events": strongest_events,
+        }
+    except Exception:
+        # Fail-safe: Return clean empty structure if database is still initializing or recovering
+        return {
+            "kpis": {"total_24h": 0, "max_mag_24h": 0.0, "avg_mag_24h": 0.0, "tsunami_alerts_24h": 0, "strongest_place_24h": "En sincronización..."},
+            "top_places": [],
+            "lowest_places": [],
+            "anomalies": [],
+            "strongest_events": [],
+        }
 
 
 def build_system_prompt(ctx: Dict[str, Any]) -> str:
@@ -244,7 +254,7 @@ async def chat_interaction(
     messages.append({"role": "user", "content": clean_user_message})
 
     # 3. Llamar a Groq Cloud
-    groq_api_key = settings.GROQ_API_KEY
+    groq_api_key = (settings.GROQ_API_KEY or "").strip().strip('"').strip("'")
     groq_model = settings.GROQ_MODEL or "openai/gpt-oss-120b"
     reply_text = ""
     used_model = groq_model
